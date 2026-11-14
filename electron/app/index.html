@@ -1,0 +1,1512 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Gestion Auto-École</title>
+<meta name="description" content="Gestion complète d'auto-école : inscriptions, paiements, planning, examens, moniteurs, véhicules, finances et code de la route.">
+<meta name="theme-color" content="#2b3038">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Auto-École">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192.png">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700;800&family=Barlow:wght@400;500;600&display=swap">
+<style>
+:root { padding-top: env(safe-area-inset-top, 0px); padding-bottom: env(safe-area-inset-bottom, 0px); }
+body { margin: 0; font-size: 14px; }
+img { max-width: 100%; }
+[hidden] { display: none !important; }
+
+/* Layout : bande "asphalte" à gauche (navigation, ligne médiane jaune), zone de travail claire à droite ; sur téléphone la bande passe en haut. */
+:root {
+  --bg: #eef1f4; --surface: #ffffff; --surface-2: #f4f6f9; --ink: #18212c; --muted: #5a6778; --line: #d5dce5;
+  --accent: #1d5bbf; --accent-soft: #e3ecfa; --accent-ink: #ffffff;
+  --road: #2b3038; --road-ink: #e6eaef; --road-muted: #9aa4b1; --mark: #f2b705;
+  --ok: #1d7f46; --ok-bg: #e2f3e9; --warn: #a35f00; --warn-bg: #fbefd9; --bad: #b70f29; --bad-bg: #fbe4e7;
+  --sign-tile: #f4f6f9;
+  --f-display: "Barlow Condensed", "Arial Narrow", Arial, sans-serif;
+  --f-body: "Barlow", "Segoe UI", Roboto, Arial, sans-serif;
+  --r: 10px;
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+  --bg: #12161b; --surface: #1a2028; --surface-2: #212833; --ink: #e6ebf1; --muted: #98a4b3; --line: #2f3946;
+  --accent: #6a9ff2; --accent-soft: #1f2e48; --accent-ink: #0d1420;
+  --road: #0b0e12; --road-ink: #e6eaef; --road-muted: #8792a0; --mark: #f2b705;
+  --ok: #4cc983; --ok-bg: #173226; --warn: #f0ae4a; --warn-bg: #3a2b14; --bad: #ff6b7c; --bad-bg: #3d1a20;
+  --sign-tile: #2a323d; color-scheme: dark; } }
+:root[data-theme="dark"] {
+  --bg: #12161b; --surface: #1a2028; --surface-2: #212833; --ink: #e6ebf1; --muted: #98a4b3; --line: #2f3946;
+  --accent: #6a9ff2; --accent-soft: #1f2e48; --accent-ink: #0d1420;
+  --road: #0b0e12; --road-ink: #e6eaef; --road-muted: #8792a0; --mark: #f2b705;
+  --ok: #4cc983; --ok-bg: #173226; --warn: #f0ae4a; --warn-bg: #3a2b14; --bad: #ff6b7c; --bad-bg: #3d1a20;
+  --sign-tile: #2a323d; color-scheme: dark; }
+
+html, body { height: 100%; }
+body { background: var(--bg); color: var(--ink); font-family: var(--f-body); font-size: 15px; line-height: 1.5; }
+* { box-sizing: border-box; }
+h1, h2, h3 { font-family: var(--f-display); font-weight: 700; line-height: 1.1; margin: 0; text-wrap: balance; letter-spacing: .01em; }
+h1 { font-size: 2.1rem; } h2 { font-size: 1.5rem; } h3 { font-size: 1.15rem; }
+p { margin: 0; }
+button, input, select, textarea { font: inherit; color: inherit; }
+:focus-visible { outline: 3px solid var(--mark); outline-offset: 2px; }
+.num { font-variant-numeric: tabular-nums; }
+
+.app { display: grid; grid-template-columns: 236px minmax(0, 1fr); min-height: 100%; }
+.side { background: var(--road); color: var(--road-ink); position: sticky; top: 0; height: 100vh; overflow-y: auto;
+  display: flex; flex-direction: column; gap: 18px; padding: 22px 0 22px 0;
+  background-image: repeating-linear-gradient(to bottom, var(--mark) 0 26px, transparent 26px 46px);
+  background-size: 4px 100%; background-repeat: no-repeat; background-position: right 10px top; }
+.brand { padding: 0 26px 0 20px; display: grid; gap: 4px; }
+.brand small { color: var(--road-muted); font-size: .72rem; letter-spacing: .14em; text-transform: uppercase; }
+.brand strong { font-family: var(--f-display); font-size: 1.45rem; line-height: 1.05; }
+.nav { display: flex; flex-direction: column; gap: 2px; padding: 0 22px 0 10px; }
+.nav a { color: var(--road-ink); text-decoration: none; padding: 8px 12px; border-radius: 8px; font-weight: 500; display: flex; align-items: center; gap: 10px; }
+.nav a::before { content: ""; width: 14px; height: 4px; border-radius: 2px; background: transparent; flex: none; }
+.nav a:hover { background: rgba(255,255,255,.06); }
+.nav a[aria-current="page"] { background: rgba(255,255,255,.1); }
+.nav a[aria-current="page"]::before { background: var(--mark); }
+.nav .sep { font-size: .7rem; letter-spacing: .14em; text-transform: uppercase; color: var(--road-muted); padding: 14px 12px 4px 36px; }
+.side .foot { margin-top: auto; padding: 0 26px 0 20px; color: var(--road-muted); font-size: .8rem; }
+
+.main { padding: 28px 32px 60px; display: grid; gap: 22px; align-content: start; min-width: 0; }
+.head { display: flex; flex-wrap: wrap; gap: 12px 20px; align-items: end; justify-content: space-between; }
+.head .sub { color: var(--muted); margin-top: 4px; }
+.row { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
+.banner { background: var(--warn-bg); color: var(--warn); border-radius: var(--r); padding: 10px 14px; font-weight: 500; }
+
+.btn { background: var(--accent); color: var(--accent-ink); border: 0; border-radius: 8px; padding: 9px 16px; font-weight: 600; cursor: pointer; white-space: nowrap; }
+.btn:hover { filter: brightness(1.08); }
+.btn.ghost { background: transparent; color: var(--ink); border: 1px solid var(--line); }
+.btn.ghost:hover { background: var(--surface-2); filter: none; }
+.btn.sm { padding: 5px 11px; font-size: .88rem; }
+.btn.danger { background: var(--bad); color: #fff; }
+.btn.link { background: none; color: var(--accent); padding: 0; border: 0; font-weight: 600; }
+.icon { background: none; border: 0; font-size: 1.6rem; line-height: 1; cursor: pointer; color: var(--muted); padding: 2px 8px; border-radius: 6px; }
+.icon:hover { background: var(--surface-2); }
+body.ro .w { display: none !important; }
+
+.card { background: var(--surface); border: 1px solid var(--line); border-radius: var(--r); padding: 18px; min-width: 0; }
+.card > h3 { margin-bottom: 12px; }
+.grid { display: grid; gap: 16px; }
+.g2 { grid-template-columns: repeat(auto-fit, minmax(min(100%, 340px), 1fr)); }
+
+.kpis { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 12px; }
+.kpi { background: var(--surface); border: 1px solid var(--line); border-radius: var(--r); padding: 14px 16px; display: grid; gap: 2px; }
+.kpi span { color: var(--muted); font-size: .78rem; letter-spacing: .08em; text-transform: uppercase; }
+.kpi b { font-family: var(--f-display); font-size: 2rem; font-weight: 700; font-variant-numeric: tabular-nums; line-height: 1.1; }
+.kpi small { color: var(--muted); }
+
+.list { display: grid; gap: 0; }
+.li { display: flex; gap: 12px; align-items: center; justify-content: space-between; padding: 10px 0; border-top: 1px solid var(--line); min-width: 0; }
+.li:first-child { border-top: 0; }
+.li .t { min-width: 0; }
+.li .t b { display: block; overflow-wrap: anywhere; }
+.li .t small { color: var(--muted); }
+.empty { color: var(--muted); padding: 8px 0; }
+.date-chip { font-family: var(--f-display); text-align: center; background: var(--surface-2); border-radius: 8px; padding: 4px 8px; min-width: 54px; line-height: 1.05; flex: none; }
+.date-chip b { display: block; font-size: 1.4rem; }
+.date-chip small { font-size: .72rem; text-transform: uppercase; letter-spacing: .08em; color: var(--muted); }
+
+.pill { display: inline-block; font-size: .78rem; font-weight: 600; padding: 2px 9px; border-radius: 999px; background: var(--surface-2); color: var(--muted); white-space: nowrap; }
+.pill.acc { background: var(--accent-soft); color: var(--accent); }
+.pill.ok { background: var(--ok-bg); color: var(--ok); }
+.pill.warn { background: var(--warn-bg); color: var(--warn); }
+.pill.bad { background: var(--bad-bg); color: var(--bad); }
+.pill.ex { background: transparent; border: 1px dashed var(--line); color: var(--muted); font-weight: 500; }
+.catbadge { font-family: var(--f-display); font-weight: 800; background: var(--ink); color: var(--bg); border-radius: 6px; padding: 1px 7px; font-size: .9rem; letter-spacing: .03em; }
+
+.filters { display: flex; flex-wrap: wrap; gap: 10px; }
+.filters input, .filters select { background: var(--surface); border: 1px solid var(--line); border-radius: 8px; padding: 8px 10px; min-width: 0; }
+.filters input { flex: 1 1 220px; }
+
+.tw { overflow-x: auto; background: var(--surface); border: 1px solid var(--line); border-radius: var(--r); }
+table { border-collapse: collapse; width: 100%; min-width: 720px; }
+th, td { text-align: left; padding: 10px 14px; border-bottom: 1px solid var(--line); vertical-align: middle; }
+th { font-size: .75rem; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); font-weight: 600; background: var(--surface-2); }
+tbody tr { cursor: pointer; }
+tbody tr:hover { background: var(--surface-2); }
+tbody tr:last-child td { border-bottom: 0; }
+td.r, th.r { text-align: right; }
+
+.bar { height: 8px; background: var(--surface-2); border-radius: 4px; overflow: hidden; min-width: 70px; }
+.bar i { display: block; height: 100%; background: var(--accent); border-radius: 4px; }
+.bar.ok i { background: var(--ok); }
+
+/* Planning */
+.week { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 10px; }
+.day { background: var(--surface); border: 1px solid var(--line); border-radius: var(--r); padding: 10px; display: grid; gap: 8px; align-content: start; min-height: 120px; min-width: 0; }
+.day.today { border-color: var(--accent); box-shadow: inset 0 3px 0 var(--accent); }
+.day h4 { margin: 0; font-family: var(--f-display); font-size: 1.05rem; display: flex; justify-content: space-between; gap: 6px; }
+.day h4 small { color: var(--muted); font-weight: 500; }
+.sess { border: 1px solid var(--line); border-left: 4px solid var(--accent); border-radius: 7px; padding: 6px 8px; background: var(--surface-2); cursor: pointer; font-size: .86rem; display: grid; gap: 1px; min-width: 0; }
+.sess.code { border-left-color: var(--mark); }
+.sess.effectuee { opacity: .72; }
+.sess.annulee { opacity: .5; text-decoration: line-through; }
+.sess b { overflow-wrap: anywhere; }
+.sess small { color: var(--muted); overflow-wrap: anywhere; }
+
+/* Examens & catégories */
+.cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 290px), 1fr)); gap: 14px; }
+.xcard { background: var(--surface); border: 1px solid var(--line); border-radius: var(--r); padding: 16px; display: grid; gap: 10px; cursor: pointer; align-content: start; }
+.xcard:hover { border-color: var(--accent); }
+.xcard .top { display: flex; gap: 12px; align-items: center; }
+.xcard .meta { color: var(--muted); font-size: .9rem; }
+.tabs { display: flex; gap: 4px; background: var(--surface-2); border-radius: 9px; padding: 4px; width: fit-content; max-width: 100%; overflow-x: auto; }
+.tabs button { border: 0; background: transparent; padding: 6px 14px; border-radius: 7px; cursor: pointer; font-weight: 600; color: var(--muted); white-space: nowrap; }
+.tabs button[aria-pressed="true"] { background: var(--surface); color: var(--ink); box-shadow: 0 1px 2px rgba(0,0,0,.12); }
+.catcode { font-family: var(--f-display); font-weight: 800; font-size: 2.2rem; line-height: 1; background: var(--ink); color: var(--bg); border-radius: 8px; padding: 6px 10px; min-width: 64px; text-align: center; }
+.facts { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+.facts div { background: var(--surface-2); border-radius: 8px; padding: 6px 8px; }
+.facts span { display: block; font-size: .7rem; color: var(--muted); text-transform: uppercase; letter-spacing: .06em; }
+.facts b { font-variant-numeric: tabular-nums; }
+
+/* Code de la route */
+.lessons { display: grid; gap: 10px; }
+details.lesson { background: var(--surface); border: 1px solid var(--line); border-radius: var(--r); }
+details.lesson summary { cursor: pointer; padding: 14px 18px; font-family: var(--f-display); font-size: 1.2rem; font-weight: 700; list-style: none; display: flex; justify-content: space-between; gap: 12px; }
+details.lesson summary::-webkit-details-marker { display: none; }
+details.lesson summary::after { content: "+"; color: var(--muted); font-size: 1.4rem; line-height: 1; }
+details.lesson[open] summary::after { content: "–"; }
+details.lesson .body { padding: 0 18px 18px; max-width: 72ch; display: grid; gap: 10px; }
+.body ul, .body ol { margin: 0; padding-left: 1.2em; display: grid; gap: 4px; }
+.body table { min-width: 0; }
+.hier { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 8px; counter-reset: h; }
+.hier div { background: var(--surface); border: 1px solid var(--line); border-radius: 8px; padding: 10px 12px; counter-increment: h; }
+.hier div::before { content: counter(h); font-family: var(--f-display); font-weight: 800; font-size: 1.5rem; color: var(--accent); display: block; line-height: 1; }
+.note { color: var(--muted); font-size: .88rem; }
+
+/* Panneaux */
+.signs { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 210px), 1fr)); gap: 12px; }
+.sign { background: var(--surface); border: 1px solid var(--line); border-radius: var(--r); padding: 14px; display: grid; gap: 8px; align-content: start; }
+.sign .pic { background: var(--sign-tile); border-radius: 8px; display: grid; place-items: center; padding: 14px; }
+.sign svg { width: 96px; height: 96px; }
+.sign b { font-family: var(--f-display); font-size: 1.08rem; line-height: 1.15; }
+.sign p { color: var(--muted); font-size: .88rem; }
+.chips { display: flex; flex-wrap: wrap; gap: 8px; }
+.chips button { border: 1px solid var(--line); background: var(--surface); padding: 6px 12px; border-radius: 999px; cursor: pointer; font-weight: 500; }
+.chips button[aria-pressed="true"] { background: var(--ink); color: var(--bg); border-color: var(--ink); }
+.famintro { color: var(--muted); max-width: 75ch; }
+
+/* Quiz */
+.quiz { max-width: 720px; display: grid; gap: 16px; }
+.qcard { background: var(--surface); border: 1px solid var(--line); border-radius: var(--r); padding: 22px; display: grid; gap: 16px; }
+.qcard .pic { display: grid; place-items: center; background: var(--sign-tile); border-radius: 10px; padding: 18px; }
+.qcard .pic svg { width: 140px; height: 140px; }
+.qprog { display: flex; gap: 4px; }
+.qprog i { flex: 1; height: 6px; border-radius: 3px; background: var(--surface-2); }
+.qprog i.ok { background: var(--ok); } .qprog i.ko { background: var(--bad); } .qprog i.cur { background: var(--accent); }
+.choices { display: grid; gap: 8px; }
+.choices button { text-align: left; border: 1px solid var(--line); background: var(--surface-2); border-radius: 9px; padding: 11px 14px; cursor: pointer; font-weight: 500; display: flex; gap: 10px; align-items: baseline; }
+.choices button:hover:not(:disabled) { border-color: var(--accent); }
+.choices button:disabled { cursor: default; }
+.choices button .k { font-family: var(--f-display); font-weight: 800; color: var(--muted); }
+.choices button.good { background: var(--ok-bg); border-color: var(--ok); color: var(--ok); }
+.choices button.bad { background: var(--bad-bg); border-color: var(--bad); color: var(--bad); }
+.expl { background: var(--surface-2); border-radius: 8px; padding: 10px 14px; }
+.score { font-family: var(--f-display); font-size: 3.4rem; font-weight: 800; line-height: 1; font-variant-numeric: tabular-nums; }
+
+/* Formulaires / dialog */
+dialog { border: 0; border-radius: 14px; padding: 0; width: min(680px, calc(100% - 24px)); max-height: calc(100% - 24px); background: var(--surface); color: var(--ink); box-shadow: 0 20px 60px rgba(0,0,0,.35); }
+dialog::backdrop { background: rgba(10, 14, 20, .55); }
+.dbody { padding: 20px 22px 22px; display: grid; gap: 16px; }
+.dh { display: flex; justify-content: space-between; gap: 12px; align-items: start; }
+.df { display: flex; justify-content: flex-end; gap: 10px; flex-wrap: wrap; }
+.form { display: grid; gap: 14px; }
+.grid2 { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 230px), 1fr)); gap: 12px; }
+.f { display: grid; gap: 4px; min-width: 0; }
+.f > span { font-size: .8rem; font-weight: 600; color: var(--muted); }
+.f input, .f select, .f textarea { background: var(--surface-2); border: 1px solid var(--line); border-radius: 8px; padding: 8px 10px; width: 100%; min-width: 0; }
+.f textarea { min-height: 70px; resize: vertical; }
+.checks { display: grid; gap: 2px; max-height: 220px; overflow-y: auto; border: 1px solid var(--line); border-radius: 8px; padding: 6px 10px; background: var(--surface-2); }
+.checks label { display: flex; gap: 8px; align-items: center; padding: 4px 0; }
+.warn-t { color: var(--warn); font-weight: 500; }
+.info { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 180px), 1fr)); gap: 10px 18px; }
+.info div span { display: block; font-size: .72rem; color: var(--muted); text-transform: uppercase; letter-spacing: .07em; }
+.info div b { font-weight: 600; overflow-wrap: anywhere; }
+.sect { display: grid; gap: 8px; }
+.sect h3 { font-size: 1.05rem; }
+.payrow { display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)) auto; gap: 8px; align-items: end; }
+.res-sel { background: var(--surface-2); border: 1px solid var(--line); border-radius: 7px; padding: 5px 8px; }
+
+.toast { position: fixed; left: 50%; transform: translateX(-50%); bottom: calc(18px + env(safe-area-inset-bottom, 0px)); background: var(--ink); color: var(--bg); padding: 10px 16px; border-radius: 9px; font-weight: 500; z-index: 50; max-width: calc(100% - 32px); }
+
+@media (max-width: 1100px) { .week { grid-template-columns: repeat(auto-fill, minmax(min(100%, 200px), 1fr)); } }
+@media (max-width: 820px) {
+  .app { grid-template-columns: minmax(0, 1fr); }
+  .side { position: sticky; top: env(safe-area-inset-top, 0px); z-index: 20; height: auto; flex-direction: row; align-items: center; gap: 10px; padding: 10px 0;
+    background-image: repeating-linear-gradient(to right, var(--mark) 0 26px, transparent 26px 46px); background-size: 100% 3px; background-position: left bottom 3px; }
+  body::before { content: ""; position: fixed; inset: 0 0 auto; height: env(safe-area-inset-top, 0px); z-index: 30; background: var(--road); }
+  .brand { padding: 0 0 0 16px; flex: none; }
+  .brand small { display: none; }
+  .brand strong { font-size: 1.1rem; max-width: 120px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .nav { flex-direction: row; overflow-x: auto; padding: 0 16px 6px 0; scrollbar-width: none; }
+  .nav a { white-space: nowrap; padding: 6px 10px; }
+  .nav a::before { display: none; }
+  .nav a[aria-current="page"] { box-shadow: inset 0 -3px 0 var(--mark); border-radius: 6px 6px 0 0; }
+  .nav .sep, .side .foot { display: none; }
+  .main { padding: 20px 16px 60px; }
+  h1 { font-size: 1.7rem; }
+}
+@media (prefers-reduced-motion: reduce) { * { transition: none !important; animation: none !important; } }
+
+/* ===== Ajouts version Pro ===== */
+.side .foot { display: grid; gap: 8px; }
+.side .foot .btn { justify-self: start; }
+.alerts { display: grid; gap: 8px; }
+.alert { display: flex; gap: 12px; align-items: center; justify-content: space-between; background: var(--surface); border: 1px solid var(--line); border-left: 4px solid var(--warn); border-radius: 8px; padding: 9px 12px; min-width: 0; }
+.alert.bad { border-left-color: var(--bad); }
+.alert.info { border-left-color: var(--accent); }
+.alert span { min-width: 0; overflow-wrap: anywhere; }
+.avatar { width: 64px; height: 64px; border-radius: 10px; object-fit: cover; background: var(--surface-2); display: grid; place-items: center; font-family: var(--f-display); font-weight: 700; font-size: 1.5rem; color: var(--muted); flex: none; overflow: hidden; }
+.avatar.sm { width: 34px; height: 34px; font-size: .9rem; border-radius: 7px; }
+.avatar img { width: 100%; height: 100%; object-fit: cover; }
+.who { display: flex; gap: 10px; align-items: center; min-width: 0; }
+.livret { display: grid; gap: 12px; }
+.livret h4 { margin: 0 0 4px; font-family: var(--f-display); font-size: 1rem; }
+.comp { display: flex; gap: 10px; justify-content: space-between; align-items: center; padding: 5px 0; border-top: 1px dashed var(--line); }
+.comp select { background: var(--surface-2); border: 1px solid var(--line); border-radius: 6px; padding: 3px 6px; font-size: .86rem; }
+.lv0 { color: var(--muted); } .lv1 { color: var(--warn); } .lv2 { color: var(--accent); } .lv3 { color: var(--ok); }
+.docs { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 230px), 1fr)); gap: 4px 14px; }
+.docs label { display: flex; gap: 8px; align-items: center; }
+.chart { width: 100%; height: auto; display: block; }
+.chart text { fill: var(--muted); font-size: 11px; font-family: var(--f-body); }
+.chart .grid line { stroke: var(--line); }
+.legend { display: flex; gap: 16px; flex-wrap: wrap; font-size: .85rem; color: var(--muted); }
+.legend i { display: inline-block; width: 10px; height: 10px; border-radius: 2px; margin-right: 6px; vertical-align: -1px; }
+.hbar { display: grid; grid-template-columns: 60px minmax(0, 1fr) 70px; gap: 10px; align-items: center; padding: 4px 0; }
+.hbar .bar { height: 12px; }
+.timer { font-family: var(--f-display); font-size: 1.4rem; font-weight: 700; font-variant-numeric: tabular-nums; }
+.timer.low { color: var(--bad); }
+.lock { position: fixed; inset: 0; z-index: 100; background: var(--road); color: var(--road-ink); display: grid; place-items: center; padding: 24px; }
+.lock form { display: grid; gap: 14px; width: min(340px, 100%); text-align: center; }
+.lock input { font-size: 1.6rem; text-align: center; letter-spacing: .4em; padding: 10px; border-radius: 10px; border: 0; background: rgba(255,255,255,.1); color: var(--road-ink); }
+.conflict { color: var(--bad); font-weight: 600; }
+.sess.conf { border-color: var(--bad); }
+.section-title { font-size: .75rem; letter-spacing: .12em; text-transform: uppercase; color: var(--muted); font-weight: 600; }
+.logo-prev { max-height: 60px; max-width: 160px; border-radius: 6px; background: var(--surface-2); }
+.steps { margin: 0; padding-left: 1.2em; display: grid; gap: 4px; }
+#print { display: none; }
+@media print {
+  @page { size: A4; margin: 14mm; }
+  body { background: #fff !important; color: #000 !important; }
+  .app, dialog, .toast, .lock { display: none !important; }
+  #print { display: block !important; font-family: var(--f-body); color: #000; font-size: 12pt; }
+}
+.doc { color: #000; background: #fff; font-family: "Barlow", Arial, sans-serif; font-size: 12pt; line-height: 1.45; }
+.doc .dhd { display: flex; justify-content: space-between; gap: 20px; align-items: flex-start; border-bottom: 3px solid #1d5bbf; padding-bottom: 10px; margin-bottom: 18px; }
+.doc .dhd img { max-height: 70px; max-width: 180px; }
+.doc h1 { font-family: "Barlow Condensed", Arial, sans-serif; font-size: 22pt; margin: 0 0 6px; color: #000; }
+.doc h2 { font-family: "Barlow Condensed", Arial, sans-serif; font-size: 15pt; margin: 18px 0 8px; color: #000; }
+.doc table { width: 100%; min-width: 0; border-collapse: collapse; margin: 8px 0; }
+.doc th, .doc td { border: 1px solid #999; padding: 6px 8px; text-align: left; color: #000; background: #fff; }
+.doc th { background: #eef2f8; text-transform: none; letter-spacing: 0; font-size: 10pt; }
+.doc .small { font-size: 9.5pt; color: #444; }
+.doc .sign { display: flex; justify-content: space-between; gap: 40px; margin-top: 40px; }
+.doc .sign div { flex: 1; border-top: 1px solid #000; padding-top: 6px; font-size: 10pt; }
+.doc .big { font-size: 18pt; font-weight: 700; }
+.doc .stamp { border: 2px solid #1d5bbf; color: #1d5bbf; display: inline-block; padding: 4px 10px; border-radius: 6px; font-weight: 700; transform: rotate(-4deg); }
+.choices button.sel { border-color: var(--accent); background: var(--accent-soft); color: var(--accent); }
+.dtabs { display: flex; gap: 4px; border-bottom: 1px solid var(--line); overflow-x: auto; }
+.dtabs button { border: 0; background: none; padding: 8px 12px; cursor: pointer; font-weight: 600; color: var(--muted); border-bottom: 3px solid transparent; white-space: nowrap; }
+.dtabs button[aria-pressed="true"] { color: var(--ink); border-bottom-color: var(--mark); }
+
+@media (max-width: 820px) { .side .foot { display: none !important; } }
+
+</style>
+<script>window.AE_PWA = true;</script>
+</head>
+<body>
+<div class="app">
+  <aside class="side">
+    <div class="brand"><small>Auto-école</small><strong id="brand-name">Mon auto-école</strong></div>
+    <nav class="nav" id="nav" aria-label="Sections">
+      <a href="#tableau" data-v="tableau">Tableau de bord</a>
+      <span class="sep">Gestion</span>
+      <a href="#apprenants" data-v="apprenants">Apprenants</a>
+      <a href="#planning" data-v="planning">Planning</a>
+      <a href="#examens" data-v="examens">Examens</a>
+      <a href="#moniteurs" data-v="moniteurs">Moniteurs</a>
+      <a href="#vehicules" data-v="vehicules">Véhicules</a>
+      <span class="sep">Pilotage</span>
+      <a href="#finances" data-v="finances">Finances</a>
+      <a href="#rapports" data-v="rapports">Rapports</a>
+      <span class="sep">Code de la route</span>
+      <a href="#code" data-v="code">Leçons du code</a>
+      <a href="#panneaux" data-v="panneaux">Panneaux</a>
+      <a href="#quiz" data-v="quiz">Entraînement</a>
+      <span class="sep">École</span>
+      <a href="#categories" data-v="categories">Catégories de permis</a>
+      <a href="#parametres" data-v="parametres">Paramètres</a>
+    </nav>
+    <div class="foot" id="foot">Chargement…</div>
+  </aside>
+  <main class="main" id="main"></main>
+</div>
+<dialog id="dlg"><div class="dbody" id="dlg-body"></div></dialog>
+<div class="toast" id="toast" hidden></div>
+<div id="print"></div>
+<input type="file" id="file-in" hidden>
+
+<script>
+/* ============ Référentiels ============ */
+const STATUTS = { inscrit: 'Inscrit', code: 'Formation code', conduite: 'Formation conduite', examen: 'En examen', diplome: 'Permis obtenu', abandon: 'Abandon' };
+const STATUT_CLS = { inscrit: '', code: 'acc', conduite: 'acc', examen: 'warn', diplome: 'ok', abandon: 'bad' };
+const EXT = { code: 'Code de la route', plateau: 'Plateau (manœuvres)', conduite: 'Conduite en circulation' };
+const RES = { attente: 'En attente', admis: 'Admis', ajourne: 'Ajourné', absent: 'Absent' };
+const RES_CLS = { attente: '', admis: 'ok', ajourne: 'bad', absent: 'warn' };
+const SEANCE_ST = { prevue: 'Prévue', effectuee: 'Effectuée', annulee: 'Annulée' };
+const MODES_PAY = ['Espèces', 'Mobile money', 'Virement', 'Chèque', 'Carte'];
+
+const CATS_DEFAUT = [
+  { code: 'AM', libelle: 'Cyclomoteurs', description: 'Cyclomoteurs à deux ou trois roues (cylindrée ≤ 50 cm³, vitesse ≤ 45 km/h) et quadricycles légers.', ageMin: 14, heuresCode: 10, heuresConduite: 8, tarif: 0, ordre: 1 },
+  { code: 'A1', libelle: 'Motocyclettes légères', description: 'Motos jusqu’à 125 cm³ et 11 kW, tricycles jusqu’à 15 kW.', ageMin: 16, heuresCode: 20, heuresConduite: 20, tarif: 0, ordre: 2 },
+  { code: 'A2', libelle: 'Motocyclettes intermédiaires', description: 'Motos d’une puissance n’excédant pas 35 kW.', ageMin: 18, heuresCode: 20, heuresConduite: 20, tarif: 0, ordre: 3 },
+  { code: 'A', libelle: 'Toutes motocyclettes', description: 'Motos sans limite de puissance, après expérience en A2 ou à partir de l’âge requis.', ageMin: 20, heuresCode: 20, heuresConduite: 20, tarif: 0, ordre: 4 },
+  { code: 'B', libelle: 'Véhicules légers', description: 'Voitures et camionnettes de PTAC ≤ 3 500 kg, 8 places assises au plus en plus du conducteur. Remorque légère ≤ 750 kg.', ageMin: 18, heuresCode: 30, heuresConduite: 20, tarif: 0, ordre: 5 },
+  { code: 'BE', libelle: 'Véhicule léger + remorque', description: 'Véhicule de catégorie B attelé d’une remorque de plus de 750 kg.', ageMin: 18, heuresCode: 0, heuresConduite: 8, tarif: 0, ordre: 6 },
+  { code: 'C1', libelle: 'Poids lourds moyens', description: 'Véhicules de 3 500 à 7 500 kg de PTAC.', ageMin: 18, heuresCode: 10, heuresConduite: 20, tarif: 0, ordre: 7 },
+  { code: 'C', libelle: 'Poids lourds', description: 'Véhicules de transport de marchandises de plus de 3 500 kg.', ageMin: 21, heuresCode: 10, heuresConduite: 30, tarif: 0, ordre: 8 },
+  { code: 'CE', libelle: 'Poids lourds + remorque', description: 'Véhicule de catégorie C attelé d’une remorque de plus de 750 kg (semi-remorques, trains routiers).', ageMin: 21, heuresCode: 0, heuresConduite: 20, tarif: 0, ordre: 9 },
+  { code: 'D1', libelle: 'Minibus', description: 'Transport de personnes, 16 places passagers au plus, longueur ≤ 8 m.', ageMin: 21, heuresCode: 10, heuresConduite: 20, tarif: 0, ordre: 10 },
+  { code: 'D', libelle: 'Transport en commun', description: 'Autobus et autocars de plus de 8 places passagers.', ageMin: 24, heuresCode: 10, heuresConduite: 30, tarif: 0, ordre: 11 },
+  { code: 'DE', libelle: 'Autocar + remorque', description: 'Véhicule de catégorie D attelé d’une remorque de plus de 750 kg.', ageMin: 24, heuresCode: 0, heuresConduite: 15, tarif: 0, ordre: 12 }
+];
+
+/* ============ Panneaux (SVG) ============ */
+const RED = '#c8102e', BLU = '#1d5bbf', K = '#111', WH = '#fff', YEL = '#f2b705';
+const tri = i => `<path d="M50 8 L94 86 H6 Z" fill="${WH}" stroke="${RED}" stroke-width="8" stroke-linejoin="round"/>${i}`;
+const triInv = i => `<path d="M6 14 H94 L50 92 Z" fill="${WH}" stroke="${RED}" stroke-width="8" stroke-linejoin="round"/>${i}`;
+const ronR = i => `<circle cx="50" cy="50" r="42" fill="${WH}" stroke="${RED}" stroke-width="9"/>${i}`;
+const ronB = i => `<circle cx="50" cy="50" r="46" fill="${BLU}" stroke="${WH}" stroke-width="2"/>${i}`;
+const ronBR = i => `<circle cx="50" cy="50" r="42" fill="${BLU}" stroke="${RED}" stroke-width="9"/>${i}`;
+const carre = i => `<rect x="6" y="6" width="88" height="88" rx="9" fill="${BLU}" stroke="${WH}" stroke-width="2"/>${i}`;
+const finR = i => `<circle cx="50" cy="50" r="45" fill="${WH}" stroke="#777" stroke-width="2"/>${i}<g stroke="#444" stroke-width="2.4"><path d="M24 80 L80 24"/><path d="M19 73 L73 19"/><path d="M29 86 L86 29"/></g>`;
+const slash = `<path d="M21 21 L79 79" stroke="${RED}" stroke-width="9"/>`;
+const T = (t, size = 38, fill = K, y = 64) => `<text x="50" y="${y}" text-anchor="middle" font-family="'Barlow Condensed','Arial Narrow',Arial,sans-serif" font-weight="700" font-size="${size}" fill="${fill}">${t}</text>`;
+const upArrow = c => `<path d="M50 16 L72 42 H58 V84 H42 V42 H28 Z" fill="${c}"/>`;
+const turnR = c => `<path d="M36 84 V54 Q36 40 50 40 H56 V28 L76 46 L56 64 V54 H50 V84 Z" fill="${c}"/>`;
+const mirror = s => `<g transform="matrix(-1 0 0 1 100 0)">${s}</g>`;
+const walker = (c, x = 0, y = 0, s = 1) => `<g transform="translate(${x} ${y}) scale(${s})" stroke="${c}" stroke-width="5" stroke-linecap="round" fill="none"><circle cx="52" cy="38" r="5" fill="${c}" stroke="none"/><path d="M51 46 L46 63 L39 80 M46 63 L56 80 M50 51 L40 59 M50 51 L60 58"/></g>`;
+const bike = (c, sw = 3.5) => `<g fill="none" stroke="${c}" stroke-width="${sw}" stroke-linecap="round" stroke-linejoin="round"><circle cx="34" cy="62" r="11"/><circle cx="66" cy="62" r="11"/><path d="M34 62 L44 46 H60 L66 62 M44 46 L52 62 L60 46 M40 41 H48 M58 40 L62 40"/></g>`;
+const car = (x, c) => `<g fill="${c}"><rect x="${x}" y="36" width="20" height="26" rx="5"/><rect x="${x + 1}" y="60" width="5" height="9" rx="1.5"/><rect x="${x + 14}" y="60" width="5" height="9" rx="1.5"/><rect x="${x + 3}" y="40" width="14" height="7" rx="2" fill="${WH}" opacity=".85"/></g>`;
+const vArrow = (x, c, up, w = 8) => up
+  ? `<path d="M${x} 22 L${x + w + 4} 38 H${x + w / 2} V78 H${x - w / 2} V38 H${x - w - 4} Z" fill="${c}"/>`
+  : `<path d="M${x} 78 L${x + w + 4} 62 H${x + w / 2} V22 H${x - w / 2} V62 H${x - w - 4} Z" fill="${c}"/>`;
+const giratoire = () => [0, 120, 240].map(r => `<g transform="rotate(${r} 50 50)"><path d="M58 25 A26 26 0 0 0 28 36" fill="none" stroke="${WH}" stroke-width="8"/><path d="M18 30 L36 30 L26 46 Z" fill="${WH}"/></g>`).join('');
+const autorouteSym = `<path d="M30 88 L45 52 H55 L70 88 Z" fill="${WH}"/><path d="M50 84 V76 M50 70 V63 M50 58 V54" stroke="${BLU}" stroke-width="2.5"/><path d="M14 40 Q50 22 86 40 V49 Q50 31 14 49 Z" fill="${WH}"/>`;
+
+const SIGNS = [
+  // Danger
+  { f: 'danger', n: 'Virage à droite', s: 'Annonce un virage dangereux vers la droite. Réduisez votre vitesse avant d’entrer dans le virage.', g: tri(`<path d="M44 80 V66 Q44 54 56 52" fill="none" stroke="${K}" stroke-width="6"/><path d="M54 43 L67 52 L54 61 Z" fill="${K}"/>`) },
+  { f: 'danger', n: 'Virage à gauche', s: 'Annonce un virage dangereux vers la gauche. Ralentissez et gardez votre droite.', g: tri(mirror(`<path d="M44 80 V66 Q44 54 56 52" fill="none" stroke="${K}" stroke-width="6"/><path d="M54 43 L67 52 L54 61 Z" fill="${K}"/>`)) },
+  { f: 'danger', n: 'Succession de virages', s: 'Plusieurs virages se suivent, le premier dans le sens indiqué. Adaptez votre vitesse sur toute la section.', g: tri(`<path d="M44 82 V72 Q44 64 54 60 Q62 56 56 47" fill="none" stroke="${K}" stroke-width="6"/><path d="M47 48 L53 35 L63 46 Z" fill="${K}"/>`) },
+  { f: 'danger', n: 'Chaussée rétrécie', s: 'La largeur de la route diminue. Serrez à droite et méfiez-vous des véhicules en sens inverse.', g: tri(`<path d="M37 82 L43 62 V42 M63 82 L57 62 V42" fill="none" stroke="${K}" stroke-width="6"/>`) },
+  { f: 'danger', n: 'Intersection avec priorité à droite', s: 'Carrefour où vous devez céder le passage aux véhicules venant de votre droite.', g: tri(`<path d="M38 44 L62 80 M62 44 L38 80" stroke="${K}" stroke-width="7" stroke-linecap="round"/>`) },
+  { f: 'danger', n: 'Cassis ou dos-d’âne', s: 'Ralentisseur ou bosse sur la chaussée. Ralentissez pour garder le contrôle du véhicule.', g: tri(`<path d="M24 78 H36 Q50 52 64 78 H76 V80 H24 Z" fill="${K}"/>`) },
+  { f: 'danger', n: 'Chaussée glissante', s: 'Risque de dérapage (pluie, boue, gravillons). Réduisez la vitesse et évitez les freinages brusques.', g: tri(`<g fill="none" stroke="${K}" stroke-width="4" stroke-linecap="round"><path d="M40 82 q6 -7 0 -14 q-6 -7 0 -14 q6 -7 0 -12"/><path d="M60 82 q6 -7 0 -14 q-6 -7 0 -14 q6 -7 0 -12"/></g>`) },
+  { f: 'danger', n: 'Feux tricolores', s: 'Annonce une intersection réglée par des feux de signalisation.', g: tri(`<rect x="41" y="34" width="18" height="48" rx="4" fill="${K}"/><circle cx="50" cy="44" r="5.5" fill="${RED}"/><circle cx="50" cy="58" r="5.5" fill="${YEL}"/><circle cx="50" cy="72" r="5.5" fill="#1f9d55"/>`) },
+  { f: 'danger', n: 'Passage pour piétons', s: 'Annonce un passage piéton. Soyez prêt à vous arrêter pour laisser traverser.', g: tri(walker(K, 2, 4, 0.92)) },
+  { f: 'danger', n: 'Endroit fréquenté par les enfants', s: 'Abords d’écoles, aires de jeux. Les enfants peuvent surgir : vitesse très réduite.', g: tri(walker(K, 7, 22, 0.66) + walker(K, 25, 26, 0.6)) },
+  { f: 'danger', n: 'Débouché de cyclistes', s: 'Des cyclistes peuvent surgir de la droite ou de la gauche.', g: tri(`<g transform="translate(16 24) scale(.68)">${bike(K, 5)}</g>`) },
+  { f: 'danger', n: 'Travaux', s: 'Chantier sur ou au bord de la route. Ralentissez, respectez la signalisation temporaire et les ouvriers.', g: tri(`<g stroke="${K}" stroke-width="5" stroke-linecap="round" fill="none"><path d="M44 50 L52 64 L44 80 M52 64 L60 80 M47 55 L36 62 L30 76"/></g><circle cx="42" cy="43" r="5" fill="${K}"/><path d="M58 81 L76 81 L67 68 Z" fill="${K}"/>`) },
+  { f: 'danger', n: 'Passage à niveau avec barrières', s: 'Croisement avec une voie ferrée équipée de barrières. Ne vous engagez jamais si les barrières bougent ou si le feu clignote.', g: tri(`<g stroke="${K}" stroke-width="4"><path d="M30 56 H70 M30 68 H70"/><path d="M35 50 V80 M50 50 V80 M65 50 V80"/></g>`) },
+  { f: 'danger', n: 'Descente dangereuse', s: 'Pente forte (pourcentage indiqué). Utilisez le frein moteur en rétrogradant.', g: tri(`<path d="M27 80 H73 L27 56 Z" fill="${K}"/>${T('10%', 15, K, 68).replace('x="50"', 'x="58"')}`) },
+  { f: 'danger', n: 'Autres dangers', s: 'Danger dont la nature est précisée par un panonceau placé sous le panneau.', g: tri(`<rect x="45.5" y="36" width="9" height="30" rx="2" fill="${K}"/><circle cx="50" cy="75" r="5.5" fill="${K}"/>`) },
+  // Interdiction
+  { f: 'interdiction', n: 'Sens interdit', s: 'Accès interdit à tout véhicule dans ce sens de circulation.', g: `<circle cx="50" cy="50" r="46" fill="${RED}" stroke="${WH}" stroke-width="2"/><rect x="16" y="41" width="68" height="18" fill="${WH}"/>` },
+  { f: 'interdiction', n: 'Circulation interdite à tout véhicule', s: 'Aucun véhicule ne peut circuler sur cette voie, dans les deux sens.', g: ronR('') },
+  { f: 'interdiction', n: 'Vitesse limitée à 30 km/h', s: 'Vitesse maximale autorisée : 30 km/h, jusqu’au panneau de fin ou à la prochaine intersection.', g: ronR(T('30', 40)) },
+  { f: 'interdiction', n: 'Vitesse limitée à 50 km/h', s: 'Vitesse maximale autorisée : 50 km/h.', g: ronR(T('50', 40)) },
+  { f: 'interdiction', n: 'Vitesse limitée à 90 km/h', s: 'Vitesse maximale autorisée : 90 km/h.', g: ronR(T('90', 40)) },
+  { f: 'interdiction', n: 'Interdiction de tourner à gauche', s: 'Interdit de tourner à gauche à la prochaine intersection.', g: ronR(`<g transform="translate(50 52) scale(-.62 .62) translate(-56 -56)">${turnR(K)}</g>` + slash) },
+  { f: 'interdiction', n: 'Demi-tour interdit', s: 'Interdit de faire demi-tour jusqu’à la prochaine intersection.', g: ronR(`<path d="M60 78 V48 Q60 34 48 34 Q36 34 36 48 V56" fill="none" stroke="${K}" stroke-width="8"/><path d="M27 54 L45 54 L36 69 Z" fill="${K}"/>` + slash) },
+  { f: 'interdiction', n: 'Interdiction de dépasser', s: 'Interdit de dépasser les véhicules à moteur autres que les deux-roues sans side-car.', g: ronR(car(26, RED) + car(54, K)) },
+  { f: 'interdiction', n: 'Signaux sonores interdits', s: 'Usage de l’avertisseur sonore (klaxon) interdit, sauf danger immédiat.', g: ronR(`<path d="M28 43 H38 L62 30 V70 L38 57 H28 Z" fill="${K}"/>` + slash) },
+  { f: 'interdiction', n: 'Accès interdit aux piétons', s: 'Les piétons ne peuvent pas emprunter cette voie.', g: ronR(walker(K, 3, 4, 0.9) + slash) },
+  { f: 'interdiction', n: 'Hauteur limitée', s: 'Accès interdit aux véhicules dont la hauteur (chargement compris) dépasse la valeur indiquée.', g: ronR(`<path d="M42 22 H58 L50 31 Z M42 78 H58 L50 69 Z" fill="${K}"/>` + T('3,5 m', 24, K, 59)) },
+  { f: 'interdiction', n: 'Poids limité', s: 'Accès interdit aux véhicules dont le poids total dépasse la valeur indiquée.', g: ronR(T('10 t', 32, K, 61)) },
+  { f: 'interdiction', n: 'Stationnement interdit', s: 'Stationnement interdit ; l’arrêt (le temps de faire monter ou descendre) reste autorisé.', g: ronBR(`<path d="M21 21 L79 79" stroke="${RED}" stroke-width="9"/>`) },
+  { f: 'interdiction', n: 'Arrêt et stationnement interdits', s: 'Ni arrêt ni stationnement, même quelques instants.', g: ronBR(`<path d="M21 21 L79 79 M79 21 L21 79" stroke="${RED}" stroke-width="9"/>`) },
+  { f: 'interdiction', n: 'Fin de limitation de vitesse', s: 'Fin de la limitation indiquée ; la vitesse générale de la route s’applique de nouveau.', g: finR(T('50', 38, '#888')) },
+  { f: 'interdiction', n: 'Fin de toutes les interdictions', s: 'Fin de toutes les interdictions précédemment signalées aux véhicules en mouvement.', g: finR('') },
+  // Obligation
+  { f: 'obligation', n: 'Direction obligatoire tout droit', s: 'Seule la direction tout droit est autorisée.', g: ronB(upArrow(WH)) },
+  { f: 'obligation', n: 'Direction obligatoire à droite', s: 'Obligation de tourner à droite à la prochaine intersection.', g: ronB(`<g transform="translate(50 50) scale(.82) translate(-56 -56)">${turnR(WH)}</g>`) },
+  { f: 'obligation', n: 'Direction obligatoire à gauche', s: 'Obligation de tourner à gauche à la prochaine intersection.', g: ronB(mirror(`<g transform="translate(50 50) scale(.82) translate(-56 -56)">${turnR(WH)}</g>`)) },
+  { f: 'obligation', n: 'Contournement obligatoire par la droite', s: 'Passez obligatoirement à droite de l’obstacle (îlot, travaux).', g: ronB(`<g transform="rotate(135 50 50) translate(50 50) scale(.85) translate(-50 -50)">${upArrow(WH)}</g>`) },
+  { f: 'obligation', n: 'Sens giratoire obligatoire', s: 'Contournez le terre-plein central dans le sens indiqué par les flèches.', g: ronB(giratoire()) },
+  { f: 'obligation', n: 'Piste ou bande cyclable obligatoire', s: 'Voie réservée aux cycles, obligatoire pour eux.', g: ronB(`<g transform="translate(6 4) scale(.88)">${bike(WH, 4.5)}</g>`) },
+  { f: 'obligation', n: 'Chemin obligatoire pour piétons', s: 'Voie réservée aux piétons.', g: ronB(walker(WH, 2, 4, 0.92)) },
+  { f: 'obligation', n: 'Vitesse minimale obligatoire', s: 'Vous devez rouler au moins à la vitesse indiquée (sauf conditions dangereuses).', g: ronB(T('30', 40, WH)) },
+  // Priorité
+  { f: 'priorite', n: 'Arrêt obligatoire (STOP)', s: 'Arrêt complet obligatoire à la limite de la chaussée abordée, puis céder le passage à tous.', g: `<polygon points="31,5 69,5 95,31 95,69 69,95 31,95 5,69 5,31" fill="${RED}" stroke="${WH}" stroke-width="3"/>${T('STOP', 31, WH, 61)}` },
+  { f: 'priorite', n: 'Cédez le passage', s: 'Cédez le passage aux usagers de la route abordée ; arrêt seulement si nécessaire.', g: triInv('') },
+  { f: 'priorite', n: 'Intersection avec une route non prioritaire', s: 'Priorité ponctuelle : vous êtes prioritaire à la prochaine intersection seulement.', g: tri(`<path d="M50 38 V82" stroke="${K}" stroke-width="10"/><path d="M30 62 H70" stroke="${K}" stroke-width="4"/>`) },
+  { f: 'priorite', n: 'Route à caractère prioritaire', s: 'Vous êtes prioritaire à toutes les intersections jusqu’au panneau de fin.', g: `<rect x="21" y="21" width="58" height="58" transform="rotate(45 50 50)" fill="${WH}" stroke="#333" stroke-width="1.5"/><rect x="31" y="31" width="38" height="38" transform="rotate(45 50 50)" fill="${YEL}"/>` },
+  { f: 'priorite', n: 'Fin de route prioritaire', s: 'Fin du caractère prioritaire : la priorité à droite s’applique de nouveau.', g: `<rect x="21" y="21" width="58" height="58" transform="rotate(45 50 50)" fill="${WH}" stroke="#333" stroke-width="1.5"/><rect x="31" y="31" width="38" height="38" transform="rotate(45 50 50)" fill="${YEL}"/><g stroke="#222" stroke-width="2.4"><path d="M28 72 L72 28"/><path d="M24 66 L66 24"/><path d="M34 76 L76 34"/></g>` },
+  { f: 'priorite', n: 'Cédez le passage à la circulation en sens inverse', s: 'Passage étroit : laissez passer les véhicules venant en face.', g: ronR(vArrow(38, K, false) + vArrow(62, RED, true, 6)) },
+  { f: 'priorite', n: 'Priorité par rapport au sens inverse', s: 'Passage étroit : vous êtes prioritaire sur les véhicules venant en face.', g: carre(vArrow(38, RED, false, 6) + vArrow(62, WH, true)) },
+  // Indication
+  { f: 'indication', n: 'Parking', s: 'Lieu aménagé pour le stationnement.', g: carre(T('P', 66, WH, 74)) },
+  { f: 'indication', n: 'Hôpital', s: 'Hôpital à proximité : évitez le bruit, notamment l’usage du klaxon.', g: carre(T('H', 62, WH, 72)) },
+  { f: 'indication', n: 'Passage pour piétons', s: 'Emplacement exact d’un passage piéton.', g: carre(`<path d="M50 14 L88 82 H12 Z" fill="${WH}"/>` + walker(K, 6, 8, 0.82)) },
+  { f: 'indication', n: 'Voie sans issue', s: 'Impasse : la route n’a pas d’autre sortie.', g: carre(`<rect x="43" y="40" width="14" height="46" fill="${WH}"/><rect x="24" y="22" width="52" height="17" fill="${RED}"/>`) },
+  { f: 'indication', n: 'Circulation à sens unique', s: 'Tous les véhicules circulent dans le sens de la flèche.', g: carre(upArrow(WH)) },
+  { f: 'indication', n: 'Arrêt d’autobus', s: 'Arrêt réservé aux autobus ; stationnement interdit aux autres véhicules.', g: carre(T('BUS', 34, WH, 62)) },
+  { f: 'indication', n: 'Poste de secours', s: 'Poste de premiers secours.', g: carre(`<rect x="20" y="20" width="60" height="60" rx="4" fill="${WH}"/><path d="M43 28 H57 V43 H72 V57 H57 V72 H43 V57 H28 V43 H43 Z" fill="${RED}"/>`) },
+  { f: 'indication', n: 'Entrée d’autoroute', s: 'Début d’autoroute : règles particulières (vitesse minimale, interdiction aux piétons, cycles, etc.).', g: carre(autorouteSym) },
+  { f: 'indication', n: 'Fin d’autoroute', s: 'Fin des règles propres à l’autoroute.', g: carre(autorouteSym + `<path d="M16 84 L84 16" stroke="${RED}" stroke-width="7"/>`) }
+];
+SIGNS.forEach((s, i) => s.id = 'p' + i);
+const FAMS = {
+  danger: ['Danger', 'Forme triangulaire, bord rouge. Ils annoncent un danger : placés environ 150 m avant hors agglomération et 50 m en agglomération.'],
+  interdiction: ['Interdiction', 'Forme ronde, bord rouge (ou fond rouge pour le sens interdit). Ils s’appliquent en général jusqu’à la prochaine intersection ou jusqu’au panneau de fin (rond blanc barré).'],
+  obligation: ['Obligation', 'Forme ronde, fond bleu, symbole blanc. Ils imposent une direction, une voie ou une vitesse minimale.'],
+  priorite: ['Priorité', 'Formes particulières (octogone, triangle pointe en bas, losange) pour qu’on les reconnaisse même de dos ou couverts de neige.'],
+  indication: ['Indication', 'Forme carrée ou rectangulaire, fond bleu. Ils informent ou indiquent des services.']
+};
+const svg = g => `<svg viewBox="0 0 100 100" role="img" aria-hidden="true">${g}</svg>`;
+
+/* ============ Leçons du code ============ */
+const LECONS = [
+  { t: 'Documents et équipements obligatoires', h: `<p>Le conducteur doit pouvoir présenter à tout contrôle :</p><ul><li>son <b>permis de conduire</b> valide pour la catégorie du véhicule ;</li><li>la <b>carte grise</b> (certificat d’immatriculation) ;</li><li>l’<b>attestation d’assurance</b> en cours de validité ;</li><li>le certificat de <b>visite technique</b> lorsque le véhicule y est soumis.</li></ul><p>Équipements : triangle de présignalisation, gilet de haute visibilité, roue de secours ou kit anti-crevaison, trousse de secours ; extincteur exigé dans certains pays et pour les véhicules de transport.</p>` },
+  { t: 'Les règles de priorité', h: `<ul><li>En l’absence de signalisation, la règle est la <b>priorité à droite</b>.</li><li><b>STOP</b> : arrêt complet à la ligne, même sans circulation, puis céder le passage dans toutes les directions.</li><li><b>Cédez le passage</b> : ralentir, s’arrêter seulement si nécessaire et laisser passer.</li><li><b>Carrefour giratoire</b> annoncé par « cédez le passage » : priorité aux véhicules déjà engagés dans l’anneau.</li><li><b>Véhicules prioritaires</b> (pompiers, ambulance, police) avec sirène et gyrophare : faciliter leur passage, sans danger pour les autres.</li><li>Les <b>piétons</b> engagés sur un passage ont toujours la priorité.</li></ul>` },
+  { t: 'Hiérarchie des indications', h: `<p>Quand plusieurs indications se contredisent, on obéit dans cet ordre :</p><div class="hier"><div>Les gestes de l’agent de circulation</div><div>Les feux de signalisation</div><div>Les panneaux</div><div>Le marquage au sol</div><div>Les règles générales (priorité à droite)</div></div>` },
+  { t: 'Vitesse, distances de sécurité et d’arrêt', h: `<ul><li><b>Distance de sécurité</b> : au moins <b>2 secondes</b> avec le véhicule qui précède (davantage par pluie, nuit ou brouillard). Repère : 2 traits de la bande d’arrêt d’urgence sur autoroute.</li><li><b>Distance d’arrêt = distance de réaction + distance de freinage.</b></li><li>Le temps de réaction moyen est d’environ <b>1 seconde</b> ; il augmente avec la fatigue, l’alcool, le téléphone.</li><li>Repère pratique sur route sèche : distance d’arrêt ≈ (dizaine de la vitesse)² en mètres. À 50 km/h ≈ 25 m, à 90 km/h ≈ 81 m. Sur route mouillée, comptez environ 1,5 fois plus.</li></ul><table><thead><tr><th>Vitesse</th><th class="r">Parcouru en 1 s</th><th class="r">Arrêt (sec)</th><th class="r">Arrêt (mouillé)</th></tr></thead><tbody><tr><td>50 km/h</td><td class="r num">14 m</td><td class="r num">≈ 25 m</td><td class="r num">≈ 38 m</td></tr><tr><td>90 km/h</td><td class="r num">25 m</td><td class="r num">≈ 81 m</td><td class="r num">≈ 120 m</td></tr><tr><td>110 km/h</td><td class="r num">31 m</td><td class="r num">≈ 121 m</td><td class="r num">≈ 180 m</td></tr></tbody></table><p class="note">Les limitations de vitesse varient selon les pays : renseignez celles de votre réglementation nationale dans vos supports de cours.</p>` },
+  { t: 'Le dépassement', h: `<ul><li>On dépasse <b>par la gauche</b>, sauf un véhicule qui a signalé qu’il tourne à gauche.</li><li>Avant : vérifier rétroviseurs et angle mort, signaler avec le clignotant, s’assurer d’avoir la place et la visibilité.</li><li>Laisser un écart latéral suffisant (environ 1 m en agglomération, 1,5 m hors agglomération, davantage pour un deux-roues).</li><li><b>Interdit</b> : ligne continue, virage ou sommet de côte sans visibilité, intersection sans priorité, passage piéton occupé, panneau d’interdiction.</li><li>Le conducteur dépassé ne doit pas accélérer et doit serrer à droite.</li></ul>` },
+  { t: 'Arrêt et stationnement', h: `<ul><li><b>Arrêt</b> : immobilisation momentanée, conducteur au volant ou à proximité, pour faire monter ou descendre des personnes ou des marchandises.</li><li><b>Stationnement</b> : immobilisation au-delà de l’arrêt.</li><li>Interdits notamment : sur un passage piéton, un trottoir, à moins de 5 m avant un passage piéton, dans un virage ou au sommet d’une côte, sur un pont, devant une sortie de véhicules, aux arrêts de bus.</li><li>Arrêt et stationnement sont considérés comme dangereux lorsque la visibilité est insuffisante.</li></ul>` },
+  { t: 'Marquage au sol', h: `<ul><li><b>Ligne continue</b> : interdit de la franchir ou de la chevaucher.</li><li><b>Ligne discontinue</b> : peut être franchie pour dépasser ou tourner.</li><li><b>Ligne d’annonce</b> (traits longs, espaces courts) : annonce une ligne continue.</li><li><b>Flèches de rabattement</b> : regagnez votre voie, une ligne continue approche.</li><li><b>Ligne d’effet</b> transversale : marque l’endroit où s’arrêter (feu, STOP, cédez le passage).</li><li><b>Zébras</b> : zone où l’on ne doit ni circuler ni s’arrêter.</li><li><b>Bandes blanches parallèles</b> : passage pour piétons.</li></ul>` },
+  { t: 'Feux de signalisation', h: `<ul><li><b>Rouge</b> : arrêt absolu à la ligne d’effet.</li><li><b>Orange fixe</b> : arrêt obligatoire, sauf si l’arrêt ne peut se faire en sécurité.</li><li><b>Vert</b> : passage autorisé, sans s’engager si le carrefour est encombré.</li><li><b>Orange clignotant</b> : passer avec prudence, les règles de priorité s’appliquent.</li><li><b>Flèche verte</b> : direction autorisée même si le feu principal est rouge, en cédant le passage aux piétons.</li></ul>` },
+  { t: 'Éclairage du véhicule', h: `<ul><li><b>Feux de position</b> : être vu, à l’arrêt ou en agglomération éclairée.</li><li><b>Feux de croisement</b> : de nuit, et de jour par mauvaise visibilité ; ils n’éblouissent pas.</li><li><b>Feux de route</b> : hors agglomération non éclairée ; à remplacer par les feux de croisement dès qu’on croise ou suit un véhicule.</li><li><b>Feux de brouillard</b> : seulement par brouillard ou neige.</li><li><b>Feux de détresse</b> : véhicule en panne, ralentissement brutal, danger.</li></ul>` },
+  { t: 'Alcool, médicaments, fatigue, téléphone', h: `<ul><li>L’alcool allonge le temps de réaction, réduit le champ visuel et donne une fausse confiance. Le seul taux sûr est zéro.</li><li>Certains médicaments (pictogramme triangle) et toutes les drogues sont incompatibles avec la conduite.</li><li><b>Fatigue</b> : pause d’au moins 15 minutes toutes les 2 heures ; s’arrêter dès les premiers signes (bâillements, paupières lourdes).</li><li>Le <b>téléphone tenu en main</b> est interdit en conduisant ; même en kit mains libres, l’attention baisse fortement.</li><li><b>Ceinture</b> obligatoire pour tous les occupants, à l’avant comme à l’arrière ; dispositifs adaptés pour les enfants.</li></ul>` },
+  { t: 'En cas d’accident : Protéger, Alerter, Secourir', h: `<ol><li><b>Protéger</b> : allumer les feux de détresse, enfiler le gilet, placer le triangle (environ 30 m en amont), faire mettre les passagers en sécurité, couper le contact des véhicules accidentés, ne pas fumer.</li><li><b>Alerter</b> : appeler les secours en donnant le lieu précis, le nombre de victimes et leur état, les dangers particuliers.</li><li><b>Secourir</b> : ne pas déplacer un blessé sauf danger immédiat, ne pas retirer le casque d’un motard, ne rien donner à boire, couvrir et rassurer la victime.</li></ol>` },
+  { t: 'Conduite de nuit et par mauvais temps', h: `<ul><li>Pluie : réduire la vitesse, doubler les distances, attention à l’aquaplanage (lâcher l’accélérateur sans freiner brusquement).</li><li>Brouillard : feux de croisement et de brouillard, vitesse réduite, se guider sur le marquage de droite.</li><li>Nuit : nettoyer pare-brise et phares, ne pas fixer les phares en face, regarder le bord droit de la route.</li><li>Vent latéral : tenir fermement le volant, surtout en sortie de tunnel ou en dépassant un poids lourd.</li></ul>` },
+  { t: 'Éco-conduite et entretien', h: `<ul><li>Conduite souple : anticiper, éviter les accélérations et freinages brusques.</li><li>Passer les rapports tôt, couper le moteur lors d’un arrêt prolongé.</li><li>Vérifier régulièrement la pression des pneus (à froid), les niveaux (huile, liquide de refroidissement, freins) et l’usure des pneus.</li><li>Retirer les charges inutiles et les galeries de toit vides.</li></ul>` }
+];
+
+const QREGLES = [
+  { q: 'À une intersection sans aucune signalisation, à qui devez-vous céder le passage ?', c: ['Aux véhicules venant de droite', 'Aux véhicules venant de gauche', 'Aux véhicules les plus gros', 'À personne'], b: 0, e: 'Sans signalisation, la règle générale est la priorité à droite.' },
+  { q: 'Au panneau STOP, sans aucun véhicule en vue :', c: ['Je marque un arrêt complet à la ligne', 'Je ralentis et je passe', 'Je klaxonne et je passe', 'Je m’arrête seulement la nuit'], b: 0, e: 'L’arrêt complet est obligatoire au STOP, même en l’absence de circulation.' },
+  { q: 'La distance de sécurité minimale avec le véhicule qui précède correspond à :', c: ['2 secondes', '1 seconde', '5 mètres', 'La longueur d’une voiture'], b: 0, e: 'Il faut au moins 2 secondes d’intervalle, davantage par mauvais temps.' },
+  { q: 'Le feu passe à l’orange fixe alors que vous pouvez vous arrêter sans danger :', c: ['Je m’arrête', 'J’accélère pour passer', 'Je passe en klaxonnant', 'Je continue, l’orange autorise le passage'], b: 0, e: 'L’orange fixe impose l’arrêt, sauf si l’arrêt ne peut se faire en sécurité.' },
+  { q: 'Un feu orange clignotant signifie :', c: ['Passer avec prudence, en respectant les règles de priorité', 'Arrêt obligatoire', 'Priorité absolue pour moi', 'Route fermée'], b: 0, e: 'Le clignotant orange signale un danger ; on passe prudemment et les règles de priorité s’appliquent.' },
+  { q: 'Un agent fait signe de passer alors que le feu est rouge :', c: ['Je passe, l’agent prime sur le feu', 'J’attends le vert', 'Je m’arrête et je klaxonne', 'Je fais demi-tour'], b: 0, e: 'Les gestes de l’agent priment sur toutes les autres indications.' },
+  { q: 'Une ligne blanche continue au milieu de la chaussée :', c: ['Ne doit être ni franchie ni chevauchée', 'Peut être franchie pour dépasser', 'Peut être franchie la nuit', 'Indique un stationnement autorisé'], b: 0, e: 'La ligne continue est infranchissable.' },
+  { q: 'En règle générale, on dépasse :', c: ['Par la gauche', 'Par la droite', 'Par le côté le plus libre', 'Sur la bande d’arrêt d’urgence'], b: 0, e: 'Le dépassement se fait par la gauche, sauf un véhicule qui tourne à gauche.' },
+  { q: 'Dans l’ordre, les trois gestes face à un accident sont :', c: ['Protéger, Alerter, Secourir', 'Secourir, Protéger, Alerter', 'Alerter, Secourir, Protéger', 'Secourir, Alerter, Protéger'], b: 0, e: 'P.A.S. : on protège d’abord pour éviter le sur-accident.' },
+  { q: 'Sur route mouillée, la distance de freinage :', c: ['Augmente', 'Diminue', 'Reste identique', 'Dépend seulement des pneus avant'], b: 0, e: 'L’adhérence diminue : la distance de freinage augmente d’environ 50 %.' },
+  { q: 'La distance d’arrêt est égale à :', c: ['Distance de réaction + distance de freinage', 'Distance de freinage seule', 'Distance de sécurité × 2', 'Vitesse ÷ 2'], b: 0, e: 'On parcourt d’abord la distance de réaction, puis la distance de freinage.' },
+  { q: 'Le temps de réaction moyen d’un conducteur attentif est d’environ :', c: ['1 seconde', '0,1 seconde', '3 secondes', '5 secondes'], b: 0, e: 'Environ 1 seconde ; il s’allonge avec la fatigue, l’alcool ou le téléphone.' },
+  { q: 'Vous croisez un véhicule de nuit avec vos feux de route allumés :', c: ['Je passe en feux de croisement', 'Je garde mes feux de route', 'J’éteins tous mes feux', 'J’allume les feux de brouillard'], b: 0, e: 'Les feux de route éblouissent ; passez en croisement dès que vous croisez ou suivez un véhicule.' },
+  { q: 'Dans un giratoire annoncé par un « cédez le passage », la priorité est :', c: ['Aux véhicules déjà dans l’anneau', 'Aux véhicules qui entrent', 'À droite', 'Au plus rapide'], b: 0, e: 'Les véhicules engagés dans l’anneau sont prioritaires.' },
+  { q: 'Sur un long trajet, il est conseillé de faire une pause :', c: ['Toutes les 2 heures', 'Toutes les 5 heures', 'Uniquement la nuit', 'Seulement en cas de panne'], b: 0, e: 'Une pause d’au moins 15 minutes toutes les 2 heures limite la fatigue.' },
+  { q: 'Une ambulance arrive derrière vous, sirène et gyrophare en marche :', c: ['Je facilite son passage sans danger', 'Je l’ignore', 'Je freine brusquement sur place', 'J’accélère devant elle'], b: 0, e: 'Il faut faciliter le passage des véhicules prioritaires, sans créer de danger.' },
+  { q: 'La ceinture de sécurité est obligatoire :', c: ['Pour tous les occupants, avant et arrière', 'Seulement pour le conducteur', 'Seulement hors agglomération', 'Seulement pour les passagers avant'], b: 0, e: 'Tous les occupants doivent être attachés.' },
+  { q: 'Avant de changer de direction, je dois dans l’ordre :', c: ['Rétroviseurs, clignotant, angle mort', 'Clignotant, puis tourner', 'Angle mort, klaxon, tourner', 'Freiner, puis clignotant'], b: 0, e: 'Contrôle des rétroviseurs, signalement au clignotant, puis contrôle de l’angle mort.' },
+  { q: 'Le stationnement sur un passage pour piétons est :', c: ['Interdit', 'Autorisé moins de 5 minutes', 'Autorisé la nuit', 'Autorisé feux de détresse allumés'], b: 0, e: 'Arrêt et stationnement sont interdits sur un passage piéton.' },
+  { q: 'Le triangle de présignalisation se place environ :', c: ['À 30 m en amont du danger', 'Juste derrière le véhicule', 'À 300 m', 'Devant le véhicule'], b: 0, e: 'Environ 30 m en amont, pour prévenir les autres usagers à temps.' }
+];
+
+
+QREGLES.push(
+  { q: 'Hors agglomération, vous suivez un poids lourd lent sur une route étroite :', c: ['J’attends une visibilité suffisante pour dépasser', 'Je dépasse dans le virage', 'Je le colle pour qu’il accélère', 'Je dépasse par la droite'], b: 0, e: 'Un dépassement n’est permis qu’avec une visibilité et un espace suffisants.' },
+  { q: 'Le feu de détresse s’utilise notamment :', c: ['En cas de panne ou de ralentissement brutal', 'Pour stationner en double file', 'Pour remercier un autre conducteur', 'Par temps de pluie'], b: 0, e: 'Il signale un danger : véhicule immobilisé, ralentissement brusque.' },
+  { q: 'L’aquaplanage se produit :', c: ['Quand une couche d’eau sépare le pneu de la route', 'Uniquement sur la neige', 'Quand les freins chauffent', 'Lorsque l’on roule trop lentement'], b: 0, e: 'Les pneus perdent le contact avec la chaussée : lâchez l’accélérateur sans freiner brutalement.' },
+  { q: 'Dans une forte descente, pour ne pas surchauffer les freins :', c: ['J’utilise le frein moteur en rétrogradant', 'Je roule au point mort', 'Je freine en continu', 'Je coupe le moteur'], b: 0, e: 'Le frein moteur évite l’échauffement et la perte d’efficacité des freins.' },
+  { q: 'Un enfant de moins de 10 ans en voiture doit être :', c: ['Installé dans un dispositif de retenue adapté', 'Sur les genoux d’un adulte', 'À l’avant sans ceinture', 'Libre à l’arrière'], b: 0, e: 'Siège auto ou rehausseur adapté à son poids et à sa taille.' },
+  { q: 'Vous êtes ébloui par un véhicule venant en face la nuit :', c: ['Je regarde le bord droit de la chaussée et je ralentis', 'Je mets mes feux de route', 'Je fixe ses phares', 'J’accélère'], b: 0, e: 'Regarder le bord droit permet de garder sa trajectoire sans être ébloui.' },
+  { q: 'L’angle mort est :', c: ['Une zone non visible dans les rétroviseurs', 'Un virage dangereux', 'Un carrefour sans feux', 'Une panne d’éclairage'], b: 0, e: 'Il se contrôle en tournant brièvement la tête avant tout déplacement latéral.' },
+  { q: 'En agglomération, un piéton s’engage sur le passage alors que vous arrivez :', c: ['Je m’arrête pour le laisser traverser', 'Je klaxonne', 'Je le contourne', 'J’accélère pour passer avant'], b: 0, e: 'Le piéton engagé sur un passage est prioritaire.' },
+  { q: 'Un pneu est trop usé lorsque :', c: ['Les témoins d’usure affleurent la bande de roulement', 'Il est sale', 'Il a moins d’un an', 'Il est gonflé à froid'], b: 0, e: 'Un pneu lisse augmente fortement les distances de freinage, surtout sur sol mouillé.' },
+  { q: 'Le kit mains libres au téléphone en conduisant :', c: ['Diminue quand même l’attention', 'Ne présente aucun risque', 'Est obligatoire', 'Améliore la vigilance'], b: 0, e: 'La conversation détourne l’attention, même sans tenir le téléphone.' }
+);
+
+const COMPETENCES = [
+  { g: 'Maîtriser le maniement du véhicule', items: ['Installation au poste de conduite', 'Démarrer et s’arrêter', 'Utiliser la boîte de vitesses', 'Diriger le véhicule en marche avant et arrière', 'Utiliser les commandes (feux, essuie-glaces, clignotants)'] },
+  { g: 'Appréhender la route', items: ['Rechercher la signalisation et les indices utiles', 'Positionner le véhicule sur la chaussée', 'Tourner à droite et à gauche', 'Franchir intersections et giratoires', 'S’arrêter et stationner'] },
+  { g: 'Circuler dans des conditions difficiles et partager la route', items: ['Maintenir les distances de sécurité', 'Croiser, dépasser, être dépassé', 'Conduire hors agglomération et sur voie rapide', 'Conduire de nuit et par mauvais temps', 'Tenir compte des usagers vulnérables'] },
+  { g: 'Pratiquer une conduite autonome, sûre et économique', items: ['Suivre un itinéraire en autonomie', 'Préparer et effectuer un trajet', 'Savoir réagir en cas d’accident', 'Pratiquer l’éco-conduite'] }
+];
+const NIVEAUX = ['Non abordé', 'Abordé', 'Traité', 'Acquis'];
+const DOCS = ['Pièce d’identité (copie)', 'Photos d’identité', 'Certificat médical', 'Justificatif de domicile', 'Fiche d’inscription signée', 'Contrat de formation signé'];
+const DEP_CATS = ['Carburant', 'Entretien véhicule', 'Assurance', 'Salaires', 'Loyer', 'Frais d’examen', 'Électricité / eau', 'Téléphone / internet', 'Fournitures', 'Impôts et taxes', 'Autre'];
+const MOIS = ['janv.', 'févr.', 'mars', 'avr.', 'mai', 'juin', 'juil.', 'août', 'sept.', 'oct.', 'nov.', 'déc.'];
+
+/* ============ Utilitaires ============ */
+const APP_VERSION = '2.0.0';
+const $ = s => document.querySelector(s);
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+const uid = () => (window.crypto && crypto.randomUUID) ? crypto.randomUUID() : Date.now().toString(36) + Math.random().toString(36).slice(2, 10);
+const iso = d => { const z = n => String(n).padStart(2, '0'); return d.getFullYear() + '-' + z(d.getMonth() + 1) + '-' + z(d.getDate()); };
+const todayISO = () => iso(new Date());
+const toDate = s => new Date(s + 'T00:00:00');
+const addDays = (s, n) => { const d = toDate(s); d.setDate(d.getDate() + n); return iso(d); };
+const daysBetween = (a, b) => Math.round((toDate(b) - toDate(a)) / 86400000);
+const monday = s => { const d = toDate(s); const w = (d.getDay() + 6) % 7; d.setDate(d.getDate() - w); return iso(d); };
+const fmtDate = (s, o) => s ? toDate(s).toLocaleDateString('fr-FR', o || { day: '2-digit', month: 'short', year: 'numeric' }) : '—';
+const fmtLong = s => fmtDate(s, { day: 'numeric', month: 'long', year: 'numeric' });
+const by = k => (a, b) => String(a[k] ?? '').localeCompare(String(b[k] ?? ''));
+const shuffle = a => { a = a.slice(); for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; };
+const sum = (arr, f) => arr.reduce((t, x) => t + (Number(f(x)) || 0), 0);
+function age(dn) { if (!dn) return null; const d = toDate(dn), t = new Date(); let a = t.getFullYear() - d.getFullYear(); if (t.getMonth() < d.getMonth() || (t.getMonth() === d.getMonth() && t.getDate() < d.getDate())) a--; return a; }
+const mins = t => { const [h, m] = String(t || '0:0').split(':'); return (+h || 0) * 60 + (+m || 0); };
+
+function enLettres(n) {
+  n = Math.round(Math.abs(Number(n) || 0)); if (n === 0) return 'zéro';
+  const u = ['', 'un', 'deux', 'trois', 'quatre', 'cinq', 'six', 'sept', 'huit', 'neuf', 'dix', 'onze', 'douze', 'treize', 'quatorze', 'quinze', 'seize', 'dix-sept', 'dix-huit', 'dix-neuf'];
+  const d = ['', 'dix', 'vingt', 'trente', 'quarante', 'cinquante', 'soixante', 'soixante', 'quatre-vingt', 'quatre-vingt'];
+  const diz = r => { if (r < 20) return u[r]; const di = Math.floor(r / 10), un = r % 10;
+    if (di === 7 || di === 9) return d[di] + (di === 7 && un === 1 ? ' et ' : '-') + u[10 + un];
+    if (un === 0) return d[di] + (di === 8 ? 's' : '');
+    if (un === 1 && di !== 8) return d[di] + ' et un';
+    return d[di] + '-' + u[un]; };
+  const cent = (x, final) => { let s = ''; const c = Math.floor(x / 100), r = x % 100;
+    if (c) { s = c === 1 ? 'cent' : u[c] + ' cent'; if (r === 0 && c > 1 && final) s += 's'; }
+    if (r) s += (s ? ' ' : '') + diz(r); return s; };
+  const parts = [];
+  for (const [v, name] of [[1e9, 'milliard'], [1e6, 'million'], [1e3, 'mille']]) {
+    const q = Math.floor(n / v); if (!q) continue;
+    if (v === 1e3) parts.push(q === 1 ? 'mille' : cent(q, false) + ' mille');
+    else parts.push(cent(q, true) + ' ' + name + (q > 1 ? 's' : ''));
+    n %= v;
+  }
+  if (n) parts.push(cent(n, true));
+  return parts.join(' ');
+}
+
+/* ============ Environnement ============ */
+const IN_ARTIFACT = !!(window.claude && typeof window.claude.use === 'function');
+const IS_PWA = !!window.AE_PWA;
+let deferredInstall = null;
+window.addEventListener('beforeinstallprompt', e => { e.preventDefault(); deferredInstall = e; scheduleRender(); });
+window.addEventListener('appinstalled', () => { deferredInstall = null; toast('Application installée'); scheduleRender(); });
+if (IS_PWA && 'serviceWorker' in navigator && /^https?:/.test(location.protocol)) {
+  window.addEventListener('load', () => navigator.serviceWorker.register('sw.js').catch(() => {}));
+}
+function applyTheme() { let t = 'auto'; try { t = localStorage.getItem('ae-theme') || 'auto'; } catch (e) {} if (t === 'auto') document.documentElement.removeAttribute('data-theme'); else document.documentElement.setAttribute('data-theme', t); }
+if (!IN_ARTIFACT) applyTheme();
+
+/* ============ État & stockage ============ */
+const COLS = ['apprenants', 'seances', 'examens', 'categories', 'quiz', 'moniteurs', 'vehicules', 'depenses'];
+const S = { config: {}, mode: 'loading', loaded: {}, note: '', ro: false,
+  view: 'tableau', f: { q: '', statut: '', cat: '' }, week: monday(todayISO()), moniteur: '', exTab: 'avenir', fam: 'all',
+  finYear: new Date().getFullYear(), finMonth: new Date().getMonth(), repYear: new Date().getFullYear(), appTab: 'resume' };
+COLS.forEach(c => S[c] = []);
+let DB = null;
+const cfg = () => ({ nom: 'Mon auto-école', devise: 'FCFA', seuilCode: 35, moniteurs: [], vehicules: [], ...S.config });
+const money = n => (Number(n) || 0).toLocaleString('fr-FR') + ' ' + esc(cfg().devise || '');
+
+const IDB = {
+  db: null,
+  open() { return new Promise((res, rej) => { const r = indexedDB.open('autoecole-pro', 1); r.onupgradeneeded = () => r.result.createObjectStore('kv'); r.onsuccess = () => res(r.result); r.onerror = () => rej(r.error); }); },
+  async get(k) { this.db = this.db || await this.open(); return new Promise((res, rej) => { const q = this.db.transaction('kv').objectStore('kv').get(k); q.onsuccess = () => res(q.result); q.onerror = () => rej(q.error); }); },
+  async set(k, v) { this.db = this.db || await this.open(); return new Promise((res, rej) => { const t = this.db.transaction('kv', 'readwrite'); t.objectStore('kv').put(v, k); t.oncomplete = () => res(); t.onerror = () => rej(t.error); }); }
+};
+function snapshotState() { const d = { config: S.config, version: APP_VERSION }; COLS.forEach(c => d[c] = S[c]); return d; }
+function applyState(d) { COLS.forEach(c => S[c] = Array.isArray(d[c]) ? d[c] : []); S.config = d.config || {}; }
+async function loadLocal() {
+  let d = null;
+  try { d = await IDB.get('state'); } catch (e) {}
+  if (!d) { try { d = JSON.parse(localStorage.getItem('autoecole-pro-state') || localStorage.getItem('autoecole-local-v1') || 'null'); } catch (e) {} }
+  if (d) applyState(d);
+}
+let saveT = 0;
+function saveLocal() {
+  clearTimeout(saveT);
+  saveT = setTimeout(async () => {
+    const d = snapshotState();
+    try { await IDB.set('state', d); } catch (e) { try { localStorage.setItem('autoecole-pro-state', JSON.stringify(d)); } catch (e2) { toast('Enregistrement local impossible : espace du navigateur plein ?'); } }
+  }, 200);
+}
+function writeErr(e) {
+  const c = e && e.code;
+  if (c === 'invalid_argument') toast('Enregistrement refusé : vous n’avez peut-être pas le droit de modifier ces données.');
+  else if (c === 'quota_exceeded') toast('Espace de stockage plein : supprimez d’anciennes données.');
+  else toast('Enregistrement impossible pour le moment. Réessayez dans un instant.');
+}
+async function put(col, id, data) {
+  const body = JSON.parse(JSON.stringify(data)); delete body.id;
+  if (DB) { try { await DB.collection(col).doc(id).set(body); } catch (e) { writeErr(e); throw e; } }
+  else { const arr = S[col]; const i = arr.findIndex(x => x.id === id); const row = { ...body, id }; if (i >= 0) arr[i] = row; else arr.push(row); saveLocal(); scheduleRender(); }
+}
+async function del(col, id) {
+  if (DB) { try { await DB.collection(col).doc(id).delete(); } catch (e) { writeErr(e); throw e; } }
+  else { S[col] = S[col].filter(x => x.id !== id); saveLocal(); scheduleRender(); }
+}
+async function putConfig(data) {
+  if (DB) { try { await DB.doc('config/ecole').set(data); } catch (e) { writeErr(e); throw e; } }
+  else { S.config = data; saveLocal(); scheduleRender(); }
+}
+
+async function startLocal() {
+  S.mode = 'local'; await loadLocal(); COLS.forEach(c => S.loaded[c] = true);
+  if (!S.config.initDone) {
+    if (!S.categories.length) S.categories = CATS_DEFAUT.map(c => ({ ...c, id: c.code }));
+    S.config = { ...S.config, initDone: true }; saveLocal();
+  }
+  scheduleRender();
+  if (S.config.pinHash) showLock();
+}
+async function init() {
+  route();
+  if (!IN_ARTIFACT) { await startLocal(); return; }
+  const c = window.claude;
+  const timer = setTimeout(() => { if (!COLS.every(k => S.loaded[k])) { S.note = 'Les données ne répondent pas encore. Vérifiez votre connexion ; la page se mettra à jour toute seule.'; scheduleRender(); } }, 10000);
+  let db = null; try { db = await c.use('db'); } catch (e) { db = null; }
+  if (!db) { clearTimeout(timer); await startLocal(); return; }
+  DB = db; S.mode = 'db';
+  c.use('user').then(async u => { if (!u) return; try { const w = await u.can('data.write'); if (w === false) { document.body.classList.add('ro'); S.ro = true; scheduleRender(); } } catch (e) {} }).catch(() => {});
+  COLS.forEach(col => {
+    DB.collection(col).onSnapshot(snap => {
+      S[col] = snap.docs.map(d => ({ ...d.data(), id: d.id }));
+      S.loaded[col] = true;
+      if (!snap.metadata.fromCache && COLS.every(k => S.loaded[k])) { clearTimeout(timer); S.note = ''; }
+      scheduleRender();
+    }, () => { clearTimeout(timer); S.note = 'La connexion aux données a été interrompue. Rechargez la page plus tard.'; scheduleRender(); });
+  });
+  DB.doc('config/ecole').onSnapshot(d => { S.config = d.exists ? d.data() : {}; scheduleRender(); }, () => {});
+}
+
+/* ============ Sécurité locale (code PIN) ============ */
+async function hashPin(p) {
+  const txt = 'autoecole:' + p;
+  try { const b = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(txt)); return [...new Uint8Array(b)].map(x => x.toString(16).padStart(2, '0')).join(''); }
+  catch (e) { let h = 5381; for (const ch of txt) h = ((h << 5) + h + ch.charCodeAt(0)) >>> 0; return 'd' + h.toString(16); }
+}
+function showLock() {
+  if ($('#lock')) return;
+  const el = document.createElement('div'); el.className = 'lock'; el.id = 'lock';
+  el.innerHTML = `<form id="lock-form"><strong style="font-family:var(--f-display);font-size:1.6rem">${esc(cfg().nom)}</strong><span>Saisissez le code d’accès</span><input id="lock-pin" type="password" inputmode="numeric" autocomplete="current-password" aria-label="Code d’accès" required><button class="btn">Déverrouiller</button><small id="lock-msg" style="color:var(--mark)"></small></form>`;
+  document.body.appendChild(el);
+  setTimeout(() => $('#lock-pin').focus(), 50);
+  $('#lock-form').addEventListener('submit', async e => { e.preventDefault(); const h = await hashPin($('#lock-pin').value);
+    if (h === S.config.pinHash) el.remove(); else { $('#lock-msg').textContent = 'Code incorrect.'; $('#lock-pin').value = ''; } });
+}
+
+/* ============ Fichiers : téléchargement, impression, images ============ */
+async function saveFile(name, data, mime) {
+  if (IN_ARTIFACT) {
+    try { const d = await window.claude.use('downloads'); if (!d) { toast('Le téléchargement n’est pas disponible dans cette vue.'); return; } await d.save({ filename: name, data }); }
+    catch (e) { if (e && e.code !== 'declined') toast('Téléchargement impossible ici.'); }
+    return;
+  }
+  const blob = data instanceof Blob ? data : new Blob([data], { type: mime || 'application/octet-stream' });
+  const url = URL.createObjectURL(blob); const a = document.createElement('a'); a.href = url; a.download = name; document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(url), 3000);
+}
+const DOC_CSS = () => { const css = [...document.querySelectorAll('style')].map(s => s.textContent).join('\n'); const i = css.indexOf('.doc {'); return i >= 0 ? css.slice(i) : ''; };
+function printDoc(title, html) {
+  const full = `<div class="doc">${html}</div>`;
+  if (!IN_ARTIFACT) { $('#print').innerHTML = full; setTimeout(() => window.print(), 80); return; }
+  const page = `<!doctype html><html lang="fr"><head><meta charset="utf-8"><title>${esc(title)}</title><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700&family=Barlow:wght@400;600&display=swap"><style>body{margin:0;padding:24px;background:#fff} @page{size:A4;margin:14mm} ${DOC_CSS()}</style></head><body>${full}<script>window.onload=()=>setTimeout(()=>window.print(),300)<\/script></body></html>`;
+  saveFile(title.replace(/[^\w\-À-ÿ ]+/g, '').trim().replace(/\s+/g, '_') + '.html', page, 'text/html');
+}
+function pickFile(accept) {
+  return new Promise(res => { const inp = $('#file-in'); inp.value = ''; inp.accept = accept || ''; inp.onchange = () => res(inp.files[0] || null); inp.click(); });
+}
+function readAsText(f) { return new Promise((res, rej) => { const r = new FileReader(); r.onload = () => res(r.result); r.onerror = () => rej(r.error); r.readAsText(f); }); }
+function resizeImage(file, max, type = 'image/jpeg') {
+  return new Promise((res, rej) => {
+    const r = new FileReader();
+    r.onload = () => { const img = new Image(); img.onload = () => { const k = Math.min(1, max / Math.max(img.width, img.height)); const c = document.createElement('canvas'); c.width = Math.round(img.width * k); c.height = Math.round(img.height * k); const x = c.getContext('2d'); if (type === 'image/jpeg') { x.fillStyle = '#fff'; x.fillRect(0, 0, c.width, c.height); } x.drawImage(img, 0, 0, c.width, c.height); res(c.toDataURL(type, 0.82)); }; img.onerror = () => rej(new Error('image')); img.src = r.result; };
+    r.onerror = () => rej(r.error); r.readAsDataURL(file);
+  });
+}
+const csvCell = v => { const s = String(v ?? ''); return /[;"\n]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s; };
+const toCSV = (head, rows) => '﻿' + [head, ...rows].map(r => r.map(csvCell).join(';')).join('\r\n');
+
+/* ============ Calculs métier ============ */
+const appById = id => S.apprenants.find(a => a.id === id);
+const nomC = a => a ? `${a.prenom || ''} ${a.nom || ''}`.trim() || 'Sans nom' : 'Apprenant supprimé';
+const initials = a => ((a?.prenom || '')[0] || '') + ((a?.nom || '')[0] || '');
+const avatar = (a, sm) => `<div class="avatar ${sm ? 'sm' : ''}">${a && a.photo ? `<img src="${esc(a.photo)}" alt="">` : esc(initials(a).toUpperCase() || '?')}</div>`;
+const catsSorted = () => S.categories.slice().sort((a, b) => (a.ordre ?? 99) - (b.ordre ?? 99) || by('code')(a, b));
+const catBy = code => S.categories.find(c => c.code === code);
+const paye = a => sum(a.paiements || [], p => p.montant);
+const reste = a => Math.max(0, (Number(a.montantTotal) || 0) - paye(a));
+const minutesConduite = (a, mon) => sum(S.seances.filter(s => s.apprenantId === a.id && s.type === 'conduite' && s.statut === 'effectuee' && (!mon || s.moniteur === mon)), s => s.duree);
+const minutesCode = a => sum(S.seances.filter(s => s.apprenantId === a.id && s.type === 'code' && s.statut === 'effectuee'), s => s.duree);
+const fmtH = m => { const h = Math.floor(m / 60), r = Math.round(m % 60); return r ? `${h} h ${String(r).padStart(2, '0')}` : `${h} h`; };
+const exPill = a => a && a.exemple ? ' <span class="pill ex">exemple</span>' : '';
+const monName = m => `${m.prenom || ''} ${m.nom || ''}`.trim();
+const vehLabel = v => `${v.modele || 'Véhicule'} (${v.immat || '—'})`;
+const allMoniteurs = () => [...new Set([...S.moniteurs.filter(m => m.actif !== false).map(monName), ...(cfg().moniteurs || []), ...S.seances.map(s => s.moniteur).filter(Boolean)])].filter(Boolean);
+const allVehicules = () => [...new Set([...S.vehicules.map(vehLabel), ...(cfg().vehicules || []), ...S.seances.map(s => s.vehicule).filter(Boolean)])].filter(Boolean);
+const livretPct = a => { const n = COMPETENCES.reduce((t, g) => t + g.items.length, 0); const lv = a.livret || {}; let s = 0; COMPETENCES.forEach((g, gi) => g.items.forEach((_, ii) => s += Number(lv[gi + '-' + ii] || 0))); return Math.round(100 * s / (3 * n)); };
+const docsManquants = a => DOCS.filter((_, i) => !(a.docs || {})[i]);
+function nextDossier() { const y = new Date().getFullYear(); const re = new RegExp('^AE-' + y + '-(\\d+)$'); const n = Math.max(0, ...S.apprenants.map(a => { const m = re.exec(a.dossier || ''); return m ? +m[1] : 0; })); return `AE-${y}-${String(n + 1).padStart(4, '0')}`; }
+function nextRecu() { const y = new Date().getFullYear(); const re = new RegExp('^R-' + y + '-(\\d+)$'); const n = Math.max(0, ...S.apprenants.flatMap(a => (a.paiements || []).map(p => { const m = re.exec(p.no || ''); return m ? +m[1] : 0; }))); return `R-${y}-${String(n + 1).padStart(5, '0')}`; }
+function overlaps(a, b) { if (a.date !== b.date) return false; const a1 = mins(a.heure), a2 = a1 + (+a.duree || 60), b1 = mins(b.heure), b2 = b1 + (+b.duree || 60); return a1 < b2 && b1 < a2; }
+function conflicts(se) {
+  if (se.statut === 'annulee') return [];
+  return S.seances.filter(o => o.id !== se.id && o.statut !== 'annulee' && overlaps(se, o)).map(o => {
+    const why = [];
+    if (se.moniteur && o.moniteur === se.moniteur) why.push('moniteur ' + se.moniteur);
+    if (se.vehicule && o.vehicule === se.vehicule) why.push('véhicule ' + se.vehicule);
+    if (se.apprenantId && o.apprenantId === se.apprenantId) why.push('apprenant');
+    return why.length ? { o, why } : null;
+  }).filter(Boolean);
+}
+const allPayments = () => S.apprenants.flatMap(a => (a.paiements || []).map((p, i) => ({ ...p, a, i })));
+
+function computeAlerts() {
+  const t = todayISO(); const out = [];
+  S.examens.filter(e => e.date >= t && daysBetween(t, e.date) <= 7).forEach(e => out.push({ lvl: 'info', txt: `Examen ${EXT[e.type] || e.type} (${e.categorie}) le ${fmtDate(e.date, { weekday: 'long', day: 'numeric', month: 'long' })} — ${(e.candidats || []).length} candidat(s)`, act: 'open-ex', id: e.id }));
+  S.vehicules.forEach(v => {
+    [['assuranceExp', 'Assurance'], ['visiteExp', 'Visite technique']].forEach(([k, l]) => { if (!v[k]) return; const d = daysBetween(t, v[k]);
+      if (d < 0) out.push({ lvl: 'bad', txt: `${l} expirée : ${vehLabel(v)} (depuis le ${fmtDate(v[k])})`, act: 'edit-veh', id: v.id });
+      else if (d <= 30) out.push({ lvl: 'warn', txt: `${l} de ${vehLabel(v)} expire le ${fmtDate(v[k])}`, act: 'edit-veh', id: v.id }); });
+    if (v.vidangeKm && v.km && Number(v.km) >= Number(v.vidangeKm) - 500) out.push({ lvl: Number(v.km) >= Number(v.vidangeKm) ? 'bad' : 'warn', txt: `Vidange à prévoir : ${vehLabel(v)} (${Number(v.km).toLocaleString('fr-FR')} km / ${Number(v.vidangeKm).toLocaleString('fr-FR')} km)`, act: 'edit-veh', id: v.id });
+    if (v.statut === 'panne') out.push({ lvl: 'warn', txt: `${vehLabel(v)} est indisponible (en panne)`, act: 'edit-veh', id: v.id });
+  });
+  S.moniteurs.filter(m => m.actif !== false && m.autorisationExp).forEach(m => { const d = daysBetween(t, m.autorisationExp);
+    if (d < 0) out.push({ lvl: 'bad', txt: `Autorisation d’enseigner expirée : ${monName(m)}`, act: 'edit-mon', id: m.id });
+    else if (d <= 60) out.push({ lvl: 'warn', txt: `Autorisation d’enseigner de ${monName(m)} expire le ${fmtDate(m.autorisationExp)}`, act: 'edit-mon', id: m.id }); });
+  const actifs = S.apprenants.filter(a => !['diplome', 'abandon'].includes(a.statut));
+  actifs.filter(a => reste(a) > 0 && a.dateInscription && daysBetween(a.dateInscription, t) > 30 && paye(a) < (Number(a.montantTotal) || 0) / 2).forEach(a => out.push({ lvl: 'warn', txt: `Paiement en retard : ${nomC(a)} a réglé ${money(paye(a))} sur ${money(a.montantTotal)}`, act: 'open-app', id: a.id }));
+  const incomplets = actifs.filter(a => docsManquants(a).length);
+  if (incomplets.length) out.push({ lvl: 'info', txt: `${incomplets.length} dossier(s) incomplet(s) : pièces manquantes`, act: 'go', id: 'apprenants' });
+  const soon = S.seances.filter(s => s.date >= t && s.date <= addDays(t, 7) && conflicts(s).length);
+  if (soon.length) out.push({ lvl: 'bad', txt: `${soon.length} séance(s) en conflit dans les 7 prochains jours (même moniteur, véhicule ou apprenant)`, act: 'go', id: 'planning' });
+  return out;
+}
+
+/* ============ En-tête des documents imprimables ============ */
+function docHead(title, sub) {
+  const c = cfg();
+  return `<div class="dhd"><div>${c.logo ? `<img src="${esc(c.logo)}" alt="">` : ''}<div class="big">${esc(c.nom)}</div><div class="small">${[c.adresse, c.ville].filter(Boolean).map(esc).join(', ')}${c.telephone ? '<br>Tél. ' + esc(c.telephone) : ''}${c.email ? ' · ' + esc(c.email) : ''}${c.agrement ? '<br>Agrément n° ' + esc(c.agrement) : ''}${c.nif ? ' · NIF/RCCM ' + esc(c.nif) : ''}</div></div><div style="text-align:right"><h1>${title}</h1>${sub ? `<div class="small">${sub}</div>` : ''}</div></div>`;
+}
+
+/* ============ Rendu ============ */
+let rq = 0;
+function scheduleRender() { if (rq) return; rq = requestAnimationFrame(() => { rq = 0; render(); }); }
+const VIEWS = ['tableau', 'apprenants', 'planning', 'examens', 'moniteurs', 'vehicules', 'finances', 'rapports', 'categories', 'code', 'panneaux', 'quiz', 'parametres'];
+function route() { const h = (location.hash || '').slice(1); S.view = VIEWS.includes(h) ? h : 'tableau'; scheduleRender(); }
+window.addEventListener('hashchange', () => { route(); window.scrollTo(0, 0); });
+
+function render() {
+  const main = $('#main');
+  const ae = document.activeElement; const fid = ae && ae.id && main.contains(ae) ? ae.id : null; let ss = null; try { ss = fid ? ae.selectionStart : null; } catch (e) {}
+  document.querySelectorAll('#nav a').forEach(a => { if (a.dataset.v === S.view) a.setAttribute('aria-current', 'page'); else a.removeAttribute('aria-current'); });
+  $('#brand-name').textContent = cfg().nom;
+  $('#foot').innerHTML = (S.mode === 'db' ? 'Données en ligne, partagées' : S.mode === 'local' ? 'Données enregistrées sur cet appareil' : 'Chargement…') + (deferredInstall ? `<button class="btn sm" data-act="install">Installer l’application</button>` : '') + `<span style="font-size:.72rem">Version ${APP_VERSION}</span>`;
+  const V = { tableau: vTableau, apprenants: vApprenants, planning: vPlanning, examens: vExamens, moniteurs: vMoniteurs, vehicules: vVehicules, finances: vFinances, rapports: vRapports, categories: vCategories, code: vCode, panneaux: vPanneaux, quiz: vQuiz, parametres: vParametres };
+  const banner = (S.note ? `<div class="banner">${esc(S.note)}</div>` : '') + (S.ro ? `<div class="banner">Consultation seule : vous pouvez voir les données mais pas les modifier.</div>` : '');
+  main.innerHTML = banner + V[S.view]();
+  if (fid) { const el = document.getElementById(fid); if (el) { el.focus(); try { if (ss != null) el.setSelectionRange(ss, ss); } catch (e) {} } }
+}
+const loading = col => !S.loaded[col];
+const head = (title, sub, actions = '') => `<div class="head"><div><h1>${title}</h1>${sub ? `<p class="sub">${sub}</p>` : ''}</div><div class="row">${actions}</div></div>`;
+const statutPill = s => `<span class="pill ${STATUT_CLS[s] || ''}">${esc(STATUTS[s] || s || '—')}</span>`;
+const dateChip = s => { const d = toDate(s); return `<div class="date-chip"><b class="num">${d.getDate()}</b><small>${d.toLocaleDateString('fr-FR', { month: 'short' }).replace('.', '')}</small></div>`; };
+const yearOpts = (id, val) => { const ys = new Set([new Date().getFullYear()]); S.apprenants.forEach(a => a.dateInscription && ys.add(+a.dateInscription.slice(0, 4))); S.depenses.forEach(d => d.date && ys.add(+d.date.slice(0, 4))); return `<select id="${id}" aria-label="Année">${[...ys].sort((a, b) => b - a).map(y => `<option ${y === val ? 'selected' : ''}>${y}</option>`).join('')}</select>`; };
+
+/* ---- Graphique en barres (SVG) ---- */
+function barChart(labels, series, opts = {}) {
+  const W = 720, H = opts.h || 230, L = 64, R = 10, Tp = 14, B = 26;
+  const max = Math.max(1, ...series.flatMap(s => s.values));
+  const nice = (() => { const p = Math.pow(10, Math.floor(Math.log10(max))); for (const m of [1, 2, 2.5, 5, 10]) if (m * p >= max) return m * p; return 10 * p; })();
+  const y = v => Tp + (H - Tp - B) * (1 - v / nice);
+  const gw = (W - L - R) / labels.length, bw = Math.min(22, (gw - 8) / series.length);
+  const fmt = v => v >= 1e6 ? (v / 1e6).toLocaleString('fr-FR', { maximumFractionDigits: 1 }) + ' M' : v >= 1e3 ? (v / 1e3).toLocaleString('fr-FR', { maximumFractionDigits: 1 }) + ' k' : String(v);
+  let s = `<svg class="chart" viewBox="0 0 ${W} ${H}" role="img" aria-label="${esc(opts.label || 'Graphique')}"><g class="grid">`;
+  for (let i = 0; i <= 4; i++) { const v = nice * i / 4; s += `<line x1="${L}" x2="${W - R}" y1="${y(v)}" y2="${y(v)}"/><text x="${L - 8}" y="${y(v) + 4}" text-anchor="end">${fmt(v)}</text>`; }
+  s += '</g>';
+  labels.forEach((lb, i) => {
+    const x0 = L + i * gw + (gw - bw * series.length) / 2;
+    series.forEach((se, k) => { const v = se.values[i] || 0; const h = (H - Tp - B) * v / nice; s += `<rect x="${x0 + k * bw}" y="${y(v)}" width="${bw - 2}" height="${Math.max(0, h)}" rx="3" style="fill:${se.color}"><title>${esc(lb)} — ${esc(se.name)} : ${v.toLocaleString('fr-FR')}</title></rect>`; });
+    s += `<text x="${L + i * gw + gw / 2}" y="${H - 8}" text-anchor="middle">${esc(lb)}</text>`;
+  });
+  return s + '</svg>' + (series.length > 1 ? `<div class="legend">${series.map(se => `<span><i style="background:${se.color}"></i>${esc(se.name)}</span>`).join('')}</div>` : '');
+}
+
+/* ---- Tableau de bord ---- */
+function vTableau() {
+  const t = todayISO(), in30 = addDays(t, 30);
+  const actifs = S.apprenants.filter(a => !['diplome', 'abandon'].includes(a.statut));
+  const exAvenir = S.examens.filter(e => e.date >= t).sort(by('date'));
+  const ex30 = exAvenir.filter(e => e.date <= in30);
+  const sj = S.seances.filter(s => s.date === t).sort(by('heure'));
+  const res = S.examens.flatMap(e => (e.candidats || []).map(c => c.resultat));
+  const ad = res.filter(r => r === 'admis').length, aj = res.filter(r => r === 'ajourne').length;
+  const taux = ad + aj ? Math.round(100 * ad / (ad + aj)) + ' %' : '—';
+  const totalDu = sum(S.apprenants.filter(a => a.statut !== 'abandon'), reste);
+  const mois = t.slice(0, 7);
+  const recMois = sum(allPayments().filter(p => (p.date || '').startsWith(mois)), p => p.montant);
+  const depMois = sum(S.depenses.filter(d => (d.date || '').startsWith(mois)), d => d.montant);
+  const alerts = computeAlerts();
+  const empty = !loading('apprenants') && S.apprenants.length === 0;
+  return head('Tableau de bord', fmtDate(t, { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' }),
+    `<button class="btn w" data-act="new-app">Inscrire un apprenant</button><button class="btn ghost w" data-act="new-seance">Planifier une séance</button><button class="btn ghost w" data-act="new-dep">Saisir une dépense</button>`) +
+  (empty ? `<div class="card"><h3>Bienvenue dans votre espace de gestion</h3><ol class="steps"><li>Renseignez les coordonnées et le logo de l’école dans les <a href="#parametres">paramètres</a>.</li><li>Ajoutez vos <a href="#moniteurs">moniteurs</a> et vos <a href="#vehicules">véhicules</a>.</li><li>Vérifiez les tarifs des <a href="#categories">catégories de permis</a>.</li><li>Inscrivez votre premier apprenant.</li></ol></div>` : '') +
+  `<div class="kpis">
+    <div class="kpi"><span>Apprenants en formation</span><b>${actifs.length}</b><small>${S.apprenants.length} dossiers au total</small></div>
+    <div class="kpi"><span>Séances aujourd’hui</span><b>${sj.filter(s => s.statut !== 'annulee').length}</b><small>${sj.filter(s => s.statut === 'effectuee').length} effectuées</small></div>
+    <div class="kpi"><span>Examens sous 30 jours</span><b>${ex30.length}</b><small>${sum(ex30, e => (e.candidats || []).length)} candidats</small></div>
+    <div class="kpi"><span>Taux de réussite</span><b>${taux}</b><small>${ad} admis · ${aj} ajournés</small></div>
+    <div class="kpi"><span>Encaissé ce mois</span><b class="num" style="font-size:1.45rem">${money(recMois)}</b><small>Dépenses : ${money(depMois)}</small></div>
+    <div class="kpi"><span>Reste à encaisser</span><b class="num" style="font-size:1.45rem">${money(totalDu)}</b><small>sur l’ensemble des dossiers</small></div>
+  </div>
+  ${alerts.length ? `<div class="card"><h3>À traiter (${alerts.length})</h3><div class="alerts">${alerts.slice(0, 12).map(a => `<div class="alert ${a.lvl}"><span>${esc(a.txt)}</span><button class="btn ghost sm" data-act="${a.act}" data-id="${esc(a.id)}">Voir</button></div>`).join('')}</div></div>` : ''}
+  <div class="grid g2">
+    <div class="card"><h3>Prochains examens</h3><div class="list">${exAvenir.slice(0, 5).map(e => `<div class="li" data-act="open-ex" data-id="${e.id}" style="cursor:pointer">${dateChip(e.date)}<div class="t" style="flex:1"><b>${esc(EXT[e.type] || e.type)} · <span class="catbadge">${esc(e.categorie || '?')}</span>${exPill(e)}</b><small>${esc(e.heure || '')} ${e.lieu ? '· ' + esc(e.lieu) : ''}</small></div><span class="pill acc">${(e.candidats || []).length} cand.</span></div>`).join('') || '<p class="empty">Aucun examen programmé.</p>'}</div></div>
+    <div class="card"><h3>Séances du jour</h3><div class="list">${sj.map(s => `<div class="li" data-act="edit-seance" data-id="${s.id}" style="cursor:pointer"><div class="t"><b>${esc(s.heure || '')} · ${s.type === 'code' ? 'Code' : 'Conduite'} — ${s.apprenantId ? esc(nomC(appById(s.apprenantId))) : esc(s.groupe || 'Séance collective')}</b><small>${esc(s.moniteur || 'Moniteur non précisé')}${s.vehicule ? ' · ' + esc(s.vehicule) : ''}</small></div><span class="pill ${s.statut === 'effectuee' ? 'ok' : s.statut === 'annulee' ? 'bad' : ''}">${SEANCE_ST[s.statut] || ''}</span></div>`).join('') || '<p class="empty">Aucune séance prévue aujourd’hui.</p>'}</div></div>
+  </div>`;
+}
+
+/* ---- Apprenants ---- */
+function vApprenants() {
+  const q = S.f.q.trim().toLowerCase();
+  const rows = S.apprenants.filter(a => (!q || [a.nom, a.prenom, a.telephone, a.piece, a.dossier].join(' ').toLowerCase().includes(q)) && (!S.f.statut || a.statut === S.f.statut) && (!S.f.cat || a.categorie === S.f.cat))
+    .sort((a, b) => by('nom')(a, b) || by('prenom')(a, b));
+  return head('Apprenants', `${S.apprenants.length} dossier(s)`, `<button class="btn ghost" data-act="csv" data-id="apprenants">Exporter (Excel)</button><button class="btn w" data-act="new-app">Inscrire un apprenant</button>`) +
+  `<div class="filters">
+    <input id="q-app" type="search" placeholder="Rechercher par nom, n° de dossier, téléphone…" value="${esc(S.f.q)}" aria-label="Rechercher">
+    <select id="f-statut" aria-label="Filtrer par statut"><option value="">Tous les statuts</option>${Object.entries(STATUTS).map(([k, v]) => `<option value="${k}" ${S.f.statut === k ? 'selected' : ''}>${v}</option>`).join('')}</select>
+    <select id="f-cat" aria-label="Filtrer par catégorie"><option value="">Toutes catégories</option>${catsSorted().map(c => `<option value="${esc(c.code)}" ${S.f.cat === c.code ? 'selected' : ''}>${esc(c.code)}</option>`).join('')}</select>
+  </div>` +
+  (loading('apprenants') ? '<p class="empty">Chargement des apprenants…</p>' : rows.length === 0 ? `<div class="card"><p class="empty">${S.apprenants.length ? 'Aucun apprenant ne correspond à ces filtres.' : 'Aucun apprenant inscrit. Cliquez sur « Inscrire un apprenant » pour commencer.'}</p></div>` :
+  `<div class="tw"><table><thead><tr><th>Apprenant</th><th>Dossier</th><th>Permis</th><th>Statut</th><th>Conduite</th><th>Livret</th><th class="r">Reste à payer</th></tr></thead><tbody>${rows.map(a => {
+    const c = catBy(a.categorie); const req = (c && c.heuresConduite) || 0; const m = minutesConduite(a); const pct = req ? Math.min(100, Math.round(100 * m / 60 / req)) : 0; const miss = docsManquants(a).length;
+    return `<tr data-act="open-app" data-id="${a.id}"><td><div class="who">${avatar(a, true)}<div><b>${esc(nomC(a))}</b>${exPill(a)}<br><small style="color:var(--muted)">${esc(a.telephone || '')}</small></div></div></td><td class="num"><small>${esc(a.dossier || '—')}</small>${miss && !['diplome', 'abandon'].includes(a.statut) ? `<br><span class="pill warn">${miss} pièce(s)</span>` : ''}</td><td><span class="catbadge">${esc(a.categorie || '?')}</span></td><td>${statutPill(a.statut)}</td><td><div class="row" style="flex-wrap:nowrap"><div class="bar ${pct >= 100 ? 'ok' : ''}" style="flex:1"><i style="width:${pct}%"></i></div><small class="num">${fmtH(m)}${req ? ' / ' + req + ' h' : ''}</small></div></td><td class="num">${livretPct(a)} %</td><td class="r num">${reste(a) ? money(reste(a)) : '<span class="pill ok">Soldé</span>'}</td></tr>`;
+  }).join('')}</tbody></table></div>`);
+}
+
+/* ---- Planning ---- */
+function vPlanning() {
+  const t = todayISO();
+  const days = [...Array(7)].map((_, i) => addDays(S.week, i));
+  const mons = allMoniteurs();
+  const list = S.seances.filter(s => s.date >= days[0] && s.date <= days[6] && (!S.moniteur || s.moniteur === S.moniteur));
+  const nb = list.filter(s => s.statut !== 'annulee'); const hC = sum(nb.filter(s => s.type === 'conduite'), s => s.duree);
+  return head('Planning des séances', `Semaine du ${fmtDate(days[0], { day: 'numeric', month: 'long' })} au ${fmtDate(days[6], { day: 'numeric', month: 'long', year: 'numeric' })} · ${nb.length} séance(s), ${fmtH(hC)} de conduite`,
+    `<button class="btn ghost" data-act="wk" data-n="-7" aria-label="Semaine précédente">‹ Préc.</button><button class="btn ghost" data-act="wk" data-n="0">Cette semaine</button><button class="btn ghost" data-act="wk" data-n="7" aria-label="Semaine suivante">Suiv. ›</button><button class="btn ghost" data-act="print-week">Imprimer</button><button class="btn w" data-act="new-seance">Nouvelle séance</button>`) +
+  `<div class="filters"><select id="f-mon" aria-label="Filtrer par moniteur"><option value="">Tous les moniteurs</option>${mons.map(m => `<option ${S.moniteur === m ? 'selected' : ''}>${esc(m)}</option>`).join('')}</select></div>
+  <div class="week">${days.map(d => { const ss = list.filter(s => s.date === d).sort(by('heure'));
+    return `<div class="day ${d === t ? 'today' : ''}"><h4><span>${fmtDate(d, { weekday: 'long' })}</span><small class="num">${fmtDate(d, { day: 'numeric', month: 'short' })}</small></h4>${ss.map(s => { const cf = conflicts(s).length; return `<div class="sess ${s.type} ${s.statut} ${cf ? 'conf' : ''}" data-act="edit-seance" data-id="${s.id}"><b class="num">${esc(s.heure || '')} · ${s.type === 'code' ? 'Code' : 'Conduite'} (${fmtH(+s.duree || 0)})</b><span>${s.apprenantId ? esc(nomC(appById(s.apprenantId))) : esc(s.groupe || 'Séance collective')}</span><small>${esc(s.moniteur || '')}${s.vehicule ? ' · ' + esc(s.vehicule) : ''}</small>${cf ? '<small class="conflict">Conflit d’horaire</small>' : ''}</div>`; }).join('')}<button class="btn link sm w" data-act="new-seance" data-date="${d}" style="justify-self:start">+ Ajouter</button></div>`; }).join('')}</div>`;
+}
+
+/* ---- Examens ---- */
+function vExamens() {
+  const t = todayISO();
+  const all = S.examens.slice().sort(by('date'));
+  const rows = S.exTab === 'avenir' ? all.filter(e => e.date >= t) : all.filter(e => e.date < t).reverse();
+  return head('Examens', 'Sessions d’examen, candidats et résultats', `<button class="btn ghost" data-act="csv" data-id="examens">Exporter (Excel)</button><button class="btn w" data-act="new-ex">Programmer un examen</button>`) +
+  `<div class="tabs" role="group" aria-label="Période"><button data-act="extab" data-v="avenir" aria-pressed="${S.exTab === 'avenir'}">À venir (${all.filter(e => e.date >= t).length})</button><button data-act="extab" data-v="passes" aria-pressed="${S.exTab === 'passes'}">Passés (${all.filter(e => e.date < t).length})</button></div>` +
+  (loading('examens') ? '<p class="empty">Chargement…</p>' : rows.length === 0 ? `<div class="card"><p class="empty">${S.exTab === 'avenir' ? 'Aucun examen à venir. Programmez une session pour y inscrire vos candidats.' : 'Aucun examen passé.'}</p></div>` :
+  `<div class="cards">${rows.map(e => { const cs = e.candidats || []; const cnt = k => cs.filter(c => c.resultat === k).length;
+    return `<div class="xcard" data-act="open-ex" data-id="${e.id}"><div class="top">${dateChip(e.date)}<div><b>${esc(EXT[e.type] || e.type)}</b>${exPill(e)}<div class="meta">${fmtDate(e.date, { weekday: 'long' })} ${e.heure ? 'à ' + esc(e.heure) : ''}</div></div></div><div class="meta">${e.lieu ? esc(e.lieu) : 'Lieu à préciser'}</div><div class="row"><span class="catbadge">${esc(e.categorie || '?')}</span><span class="pill acc">${cs.length} candidat(s)</span>${cnt('admis') ? `<span class="pill ok">${cnt('admis')} admis</span>` : ''}${cnt('ajourne') ? `<span class="pill bad">${cnt('ajourne')} ajourné(s)</span>` : ''}${cnt('absent') ? `<span class="pill warn">${cnt('absent')} absent(s)</span>` : ''}</div></div>`; }).join('')}</div>`);
+}
+
+/* ---- Moniteurs ---- */
+function vMoniteurs() {
+  const t = todayISO(), mois = t.slice(0, 7);
+  const rows = S.moniteurs.slice().sort(by('nom'));
+  return head('Moniteurs', `${rows.filter(m => m.actif !== false).length} moniteur(s) actif(s)`, `<button class="btn w" data-act="new-mon">Ajouter un moniteur</button>`) +
+  (loading('moniteurs') ? '<p class="empty">Chargement…</p>' : rows.length === 0 ? `<div class="card"><p class="empty">Aucun moniteur enregistré. Ajoutez vos moniteurs pour suivre leurs heures et leurs autorisations d’enseigner.</p></div>` :
+  `<div class="cards">${rows.map(m => { const n = monName(m); const ss = S.seances.filter(s => s.moniteur === n);
+    const hM = sum(ss.filter(s => s.statut === 'effectuee' && (s.date || '').startsWith(mois)), s => s.duree); const av = ss.filter(s => s.date >= t && s.statut === 'prevue').length;
+    const exp = m.autorisationExp ? daysBetween(t, m.autorisationExp) : null;
+    return `<div class="xcard" data-act="edit-mon" data-id="${m.id}"><div class="top">${avatar(m)}<div><b style="font-family:var(--f-display);font-size:1.2rem">${esc(n)}</b>${exPill(m)}<div class="meta">${esc(m.telephone || '')}</div></div></div><div class="row">${(m.categories || '').split(/[,\s]+/).filter(Boolean).map(c => `<span class="catbadge">${esc(c)}</span>`).join('')}${m.actif === false ? '<span class="pill">Inactif</span>' : ''}</div><div class="facts"><div><span>Heures ce mois</span><b>${fmtH(hM)}</b></div><div><span>À venir</span><b>${av}</b></div><div><span>Autorisation</span><b>${exp == null ? '—' : exp < 0 ? '<span class="conflict">Expirée</span>' : fmtDate(m.autorisationExp, { month: 'short', year: '2-digit' })}</b></div></div></div>`; }).join('')}</div>`);
+}
+
+/* ---- Véhicules ---- */
+function vVehicules() {
+  const t = todayISO();
+  const st = { dispo: ['Disponible', 'ok'], garage: ['Au garage', 'warn'], panne: ['En panne', 'bad'] };
+  const exp = d => { if (!d) return '—'; const n = daysBetween(t, d); return `<span class="${n < 0 ? 'conflict' : n <= 30 ? 'warn-t' : ''}">${fmtDate(d)}</span>`; };
+  return head('Véhicules', `${S.vehicules.length} véhicule(s) au parc`, `<button class="btn w" data-act="new-veh">Ajouter un véhicule</button>`) +
+  (loading('vehicules') ? '<p class="empty">Chargement…</p>' : S.vehicules.length === 0 ? `<div class="card"><p class="empty">Aucun véhicule. Ajoutez votre parc pour être alerté des échéances d’assurance, de visite technique et de vidange.</p></div>` :
+  `<div class="tw"><table><thead><tr><th>Véhicule</th><th>Catégorie</th><th>État</th><th class="r">Kilométrage</th><th>Assurance</th><th>Visite technique</th><th class="r">Prochaine vidange</th><th class="r">Dépenses (année)</th></tr></thead><tbody>${S.vehicules.slice().sort(by('modele')).map(v => {
+    const dep = sum(S.depenses.filter(d => d.vehicule === vehLabel(v) && (d.date || '').startsWith(String(new Date().getFullYear()))), d => d.montant);
+    return `<tr data-act="edit-veh" data-id="${v.id}"><td><b>${esc(v.modele || '')}</b>${exPill(v)}<br><small style="color:var(--muted)">${esc(v.immat || '')}</small></td><td><span class="catbadge">${esc(v.categorie || '?')}</span></td><td><span class="pill ${(st[v.statut] || st.dispo)[1]}">${(st[v.statut] || st.dispo)[0]}</span></td><td class="r num">${v.km ? Number(v.km).toLocaleString('fr-FR') + ' km' : '—'}</td><td class="num">${exp(v.assuranceExp)}</td><td class="num">${exp(v.visiteExp)}</td><td class="r num">${v.vidangeKm ? Number(v.vidangeKm).toLocaleString('fr-FR') + ' km' : '—'}</td><td class="r num">${money(dep)}</td></tr>`; }).join('')}</tbody></table></div>`);
+}
+
+/* ---- Finances ---- */
+function vFinances() {
+  const y = S.finYear, m = S.finMonth;
+  const ym = (yy, mm) => `${yy}-${String(mm + 1).padStart(2, '0')}`;
+  const pays = allPayments(); const deps = S.depenses;
+  const rec = MOIS.map((_, i) => sum(pays.filter(p => (p.date || '').startsWith(ym(y, i))), p => p.montant));
+  const dep = MOIS.map((_, i) => sum(deps.filter(d => (d.date || '').startsWith(ym(y, i))), d => d.montant));
+  const key = ym(y, m);
+  const pM = pays.filter(p => (p.date || '').startsWith(key)).sort(by('date'));
+  const dM = deps.filter(d => (d.date || '').startsWith(key)).sort(by('date'));
+  const rY = sum(rec, x => x), dY = sum(dep, x => x);
+  return head('Finances', 'Encaissements, dépenses et résultat', `<button class="btn ghost" data-act="csv" data-id="paiements">Exporter les encaissements</button><button class="btn ghost" data-act="csv" data-id="depenses">Exporter les dépenses</button><button class="btn w" data-act="new-dep">Nouvelle dépense</button>`) +
+  `<div class="filters">${yearOpts('fin-year', y)}<select id="fin-month" aria-label="Mois">${MOIS.map((n, i) => `<option value="${i}" ${i === m ? 'selected' : ''}>${n}</option>`).join('')}</select></div>
+  <div class="kpis">
+    <div class="kpi"><span>Encaissé · ${MOIS[m]} ${y}</span><b class="num" style="font-size:1.45rem">${money(rec[m])}</b><small>${pM.length} paiement(s)</small></div>
+    <div class="kpi"><span>Dépenses · ${MOIS[m]} ${y}</span><b class="num" style="font-size:1.45rem">${money(dep[m])}</b><small>${dM.length} dépense(s)</small></div>
+    <div class="kpi"><span>Résultat du mois</span><b class="num" style="font-size:1.45rem;color:${rec[m] - dep[m] < 0 ? 'var(--bad)' : 'var(--ok)'}">${money(rec[m] - dep[m])}</b><small>encaissements − dépenses</small></div>
+    <div class="kpi"><span>Résultat ${y}</span><b class="num" style="font-size:1.45rem">${money(rY - dY)}</b><small>${money(rY)} encaissés</small></div>
+    <div class="kpi"><span>Reste à encaisser</span><b class="num" style="font-size:1.45rem">${money(sum(S.apprenants.filter(a => a.statut !== 'abandon'), reste))}</b><small>tous dossiers</small></div>
+  </div>
+  <div class="card"><h3>Encaissements et dépenses ${y}</h3>${barChart(MOIS, [{ name: 'Encaissements', values: rec, color: 'var(--accent)' }, { name: 'Dépenses', values: dep, color: 'var(--warn)' }], { label: 'Encaissements et dépenses par mois' })}</div>
+  <div class="grid g2">
+    <div class="card"><h3>Encaissements de ${MOIS[m]}</h3><div class="list">${pM.map(p => `<div class="li"><div class="t"><b>${esc(nomC(p.a))}</b><small>${fmtDate(p.date)} · ${esc(p.mode || '')} · ${esc(p.no || '')}</small></div><div class="row" style="flex-wrap:nowrap"><b class="num">${money(p.montant)}</b><button class="btn link sm" data-act="recu" data-id="${p.a.id}" data-i="${p.i}">Reçu</button></div></div>`).join('') || '<p class="empty">Aucun encaissement ce mois.</p>'}</div></div>
+    <div class="card"><h3>Dépenses de ${MOIS[m]}</h3><div class="list">${dM.map(d => `<div class="li" data-act="edit-dep" data-id="${d.id}" style="cursor:pointer"><div class="t"><b>${esc(d.libelle || d.categorie)}</b>${exPill(d)}<small>${fmtDate(d.date)} · ${esc(d.categorie || '')}${d.vehicule ? ' · ' + esc(d.vehicule) : ''}</small></div><b class="num">${money(d.montant)}</b></div>`).join('') || '<p class="empty">Aucune dépense ce mois.</p>'}</div></div>
+  </div>`;
+}
+
+/* ---- Rapports ---- */
+function vRapports() {
+  const y = String(S.repYear);
+  const ins = MOIS.map((_, i) => S.apprenants.filter(a => (a.dateInscription || '').startsWith(`${y}-${String(i + 1).padStart(2, '0')}`)).length);
+  const insY = S.apprenants.filter(a => (a.dateInscription || '').startsWith(y));
+  const cats = catsSorted().map(c => ({ c, n: insY.filter(a => a.categorie === c.code).length })).filter(x => x.n);
+  const maxC = Math.max(1, ...cats.map(x => x.n));
+  const exY = S.examens.filter(e => (e.date || '').startsWith(y));
+  const rows = Object.entries(EXT).map(([k, l]) => { const cs = exY.filter(e => e.type === k).flatMap(e => e.candidats || []); const ad = cs.filter(c => c.resultat === 'admis').length, aj = cs.filter(c => c.resultat === 'ajourne').length, ab = cs.filter(c => c.resultat === 'absent').length; return { l, n: cs.length, ad, aj, ab, t: ad + aj ? Math.round(100 * ad / (ad + aj)) : null }; });
+  const mons = allMoniteurs().map(n => { const ss = S.seances.filter(s => s.moniteur === n && (s.date || '').startsWith(y) && s.statut === 'effectuee'); return { n, nb: ss.length, hc: sum(ss.filter(s => s.type === 'conduite'), s => s.duree), hk: sum(ss.filter(s => s.type === 'code'), s => s.duree) }; });
+  const ab = insY.filter(a => a.statut === 'abandon').length, dip = S.apprenants.filter(a => (a.datePermis || '').startsWith(y)).length;
+  return head('Rapports', 'Statistiques d’activité de l’école', `${yearOpts('rep-year', S.repYear)}<button class="btn ghost" data-act="csv" data-id="seances">Exporter les séances</button>`) +
+  `<div class="kpis"><div class="kpi"><span>Inscriptions ${y}</span><b>${insY.length}</b></div><div class="kpi"><span>Permis obtenus ${y}</span><b>${dip}</b></div><div class="kpi"><span>Abandons ${y}</span><b>${ab}</b><small>${insY.length ? Math.round(100 * ab / insY.length) : 0} % des inscrits</small></div><div class="kpi"><span>Heures de conduite ${y}</span><b>${fmtH(sum(mons, x => x.hc))}</b></div></div>
+  <div class="card"><h3>Inscriptions par mois</h3>${barChart(MOIS, [{ name: 'Inscriptions', values: ins, color: 'var(--accent)' }], { h: 200, label: 'Inscriptions par mois' })}</div>
+  <div class="grid g2">
+    <div class="card"><h3>Inscriptions par catégorie</h3>${cats.map(x => `<div class="hbar"><span class="catbadge" style="justify-self:start">${esc(x.c.code)}</span><div class="bar"><i style="width:${100 * x.n / maxC}%"></i></div><b class="num" style="text-align:right">${x.n}</b></div>`).join('') || '<p class="empty">Aucune inscription cette année.</p>'}</div>
+    <div class="card"><h3>Résultats aux examens</h3><div class="tw" style="border:0"><table style="min-width:0"><thead><tr><th>Épreuve</th><th class="r">Présentés</th><th class="r">Admis</th><th class="r">Ajournés</th><th class="r">Absents</th><th class="r">Réussite</th></tr></thead><tbody>${rows.map(r => `<tr style="cursor:default"><td>${r.l}</td><td class="r num">${r.n}</td><td class="r num">${r.ad}</td><td class="r num">${r.aj}</td><td class="r num">${r.ab}</td><td class="r num"><b>${r.t == null ? '—' : r.t + ' %'}</b></td></tr>`).join('')}</tbody></table></div></div>
+  </div>
+  <div class="card"><h3>Activité des moniteurs</h3>${mons.length ? `<div class="tw" style="border:0"><table style="min-width:0"><thead><tr><th>Moniteur</th><th class="r">Séances effectuées</th><th class="r">Heures de conduite</th><th class="r">Heures de code</th></tr></thead><tbody>${mons.map(r => `<tr style="cursor:default"><td>${esc(r.n)}</td><td class="r num">${r.nb}</td><td class="r num">${fmtH(r.hc)}</td><td class="r num">${fmtH(r.hk)}</td></tr>`).join('')}</tbody></table></div>` : '<p class="empty">Aucun moniteur.</p>'}</div>`;
+}
+
+/* ---- Catégories ---- */
+function vCategories() {
+  const cats = catsSorted();
+  return head('Catégories de permis', 'Âges, volumes horaires et tarifs de chaque formation', `<button class="btn w" data-act="new-cat">Ajouter une catégorie</button>`) +
+  `<p class="note">Les âges et volumes horaires proposés sont des valeurs courantes : ajustez-les selon la réglementation de votre pays et vos forfaits.</p>` +
+  (loading('categories') ? '<p class="empty">Chargement…</p>' : cats.length === 0 ? `<div class="card"><p>Aucune catégorie enregistrée.</p><p style="margin-top:10px"><button class="btn w" data-act="install-cats">Installer les 12 catégories standard (AM à DE)</button></p></div>` :
+  `<div class="cards">${cats.map(c => { const n = S.apprenants.filter(a => a.categorie === c.code && !['diplome', 'abandon'].includes(a.statut)).length;
+    return `<div class="xcard" data-act="edit-cat" data-id="${c.id}"><div class="top"><div class="catcode">${esc(c.code)}</div><div><b style="font-family:var(--f-display);font-size:1.2rem">${esc(c.libelle)}</b><div class="meta">${n} apprenant(s) en formation</div></div></div><p class="meta">${esc(c.description || '')}</p><div class="facts"><div><span>Âge min.</span><b>${c.ageMin ?? '—'} ans</b></div><div><span>Code</span><b>${c.heuresCode ?? 0} h</b></div><div><span>Conduite</span><b>${c.heuresConduite ?? 0} h</b></div></div><div class="row" style="justify-content:space-between"><span class="meta">Tarif</span><b class="num">${c.tarif ? money(c.tarif) : '<span class="pill">à définir</span>'}</b></div></div>`; }).join('')}</div>`);
+}
+
+/* ---- Code de la route ---- */
+function vCode() {
+  return head('Code de la route', 'Les règles essentielles à maîtriser avant l’examen théorique', `<a class="btn" href="#quiz">S’entraîner</a><a class="btn ghost" href="#panneaux">Voir les panneaux</a>`) +
+  `<div class="lessons">${LECONS.map((l, i) => `<details class="lesson" ${i === 1 ? 'open' : ''}><summary>${esc(l.t)}</summary><div class="body">${l.h}</div></details>`).join('')}</div>`;
+}
+function vPanneaux() {
+  const fams = Object.keys(FAMS);
+  const list = SIGNS.filter(s => S.fam === 'all' || s.f === S.fam);
+  return head('Panneaux de signalisation', `${SIGNS.length} panneaux classés par famille`, `<a class="btn" href="#quiz">Quiz sur les panneaux</a>`) +
+  `<div class="chips" role="group" aria-label="Familles"><button data-act="fam" data-v="all" aria-pressed="${S.fam === 'all'}">Tous</button>${fams.map(f => `<button data-act="fam" data-v="${f}" aria-pressed="${S.fam === f}">${FAMS[f][0]}</button>`).join('')}</div>` +
+  (S.fam !== 'all' ? `<p class="famintro">${FAMS[S.fam][1]}</p>` : `<p class="famintro">La forme et la couleur d’un panneau indiquent sa famille avant même de lire le symbole : triangle = danger, rond rouge = interdiction, rond bleu = obligation, carré bleu = indication.</p>`) +
+  `<div class="signs">${list.map(s => `<div class="sign"><div class="pic">${svg(s.g)}</div><span class="pill ${s.f === 'danger' || s.f === 'interdiction' ? 'bad' : s.f === 'priorite' ? 'warn' : 'acc'}" style="justify-self:start">${FAMS[s.f][0]}</span><b>${esc(s.n)}</b><p>${esc(s.s)}</p></div>`).join('')}</div>`;
+}
+
+/* ---- Entraînement & examen blanc ---- */
+let Q = { etat: 'config', mode: 'mixte', app: '', items: [], i: 0, rep: [], sel: null, end: 0 };
+let qTimer = 0;
+function buildQuiz(mode) {
+  const n = mode === 'examen' ? 40 : 10;
+  const signQ = s => { const same = shuffle(SIGNS.filter(x => x.id !== s.id && x.f === s.f)); const other = shuffle(SIGNS.filter(x => x.id !== s.id && x.f !== s.f)); const d = [...same.slice(0, 2), ...other].slice(0, 3); const choix = shuffle([s, ...d]); return { kind: 'sign', q: 'Que signifie ce panneau ?', g: s.g, c: choix.map(x => x.n), b: choix.indexOf(s), e: s.s }; };
+  const ruleQ = r => { const ord = shuffle(r.c.map((t, i) => ({ t, i }))); return { kind: 'rule', q: r.q, c: ord.map(o => o.t), b: ord.findIndex(o => o.i === r.b), e: r.e }; };
+  const signs = shuffle(SIGNS), rules = shuffle(QREGLES);
+  let nS = mode === 'panneaux' ? n : mode === 'regles' ? 0 : Math.ceil(n / 2);
+  nS = Math.min(nS, signs.length); let nR = Math.min(n - nS, rules.length); if (nS + nR < n) nS = Math.min(signs.length, n - nR);
+  return shuffle([...signs.slice(0, nS).map(signQ), ...rules.slice(0, nR).map(ruleQ)]);
+}
+function stopTimer() { clearInterval(qTimer); qTimer = 0; }
+function finishQuiz() {
+  stopTimer(); Q.etat = 'fin';
+  const sc = Q.rep.filter((r, i) => r === Q.items[i].b).length;
+  if (Q.app && !S.ro) put('quiz', uid(), { apprenantId: Q.app, date: todayISO(), mode: Q.mode, score: sc, total: Q.items.length }).then(() => toast('Score enregistré')).catch(() => {});
+  render(); window.scrollTo(0, 0);
+}
+function tickTimer() {
+  const left = Math.max(0, Math.round((Q.end - Date.now()) / 1000)); const el = $('#qz-timer');
+  if (el) { el.textContent = `${Math.floor(left / 60)}:${String(left % 60).padStart(2, '0')}`; el.classList.toggle('low', left < 120); }
+  if (left <= 0) { toast('Temps écoulé'); finishQuiz(); }
+}
+function vQuiz() {
+  const h = head('Entraînement au code', 'Séries d’entraînement et examen blanc');
+  const seuil = Number(cfg().seuilCode) || 35;
+  const modeName = m => ({ panneaux: 'Panneaux', regles: 'Règles', mixte: 'Mixte', examen: 'Examen blanc' }[m] || m);
+  if (Q.etat === 'config') {
+    const apps = S.apprenants.filter(a => !['diplome', 'abandon'].includes(a.statut)).sort(by('nom'));
+    const recent = S.quiz.slice().sort((a, b) => String(b.date).localeCompare(String(a.date))).slice(0, 10);
+    return h + `<div class="quiz"><div class="qcard"><h3>Nouvelle série</h3>
+      <div class="grid2"><label class="f"><span>Type</span><select id="qz-mode"><option value="mixte" ${Q.mode === 'mixte' ? 'selected' : ''}>Entraînement mixte (10 questions)</option><option value="panneaux" ${Q.mode === 'panneaux' ? 'selected' : ''}>Panneaux (10 questions)</option><option value="regles" ${Q.mode === 'regles' ? 'selected' : ''}>Règles (10 questions)</option><option value="examen" ${Q.mode === 'examen' ? 'selected' : ''}>Examen blanc (40 questions, 25 min)</option></select></label>
+      <label class="f"><span>Apprenant (pour enregistrer le score)</span><select id="qz-app"><option value="">Entraînement libre (non enregistré)</option>${apps.map(a => `<option value="${a.id}" ${Q.app === a.id ? 'selected' : ''}>${esc(nomC(a))}</option>`).join('')}</select></label></div>
+      <p class="note">L’examen blanc se déroule sans correction immédiate ; il est réussi à partir de ${seuil} bonnes réponses sur 40 (seuil modifiable dans les paramètres).</p>
+      <div><button class="btn" data-act="qz-start">Commencer</button></div></div>
+      <div class="card"><h3>Derniers scores enregistrés</h3><div class="list">${recent.map(r => { const ok = r.total === 40 ? r.score >= seuil : r.score >= 8; return `<div class="li"><div class="t"><b>${esc(nomC(appById(r.apprenantId)))}</b><small>${fmtDate(r.date)} · ${modeName(r.mode)}</small></div><span class="pill ${ok ? 'ok' : r.score / r.total >= .5 ? 'warn' : 'bad'} num">${r.score} / ${r.total}</span></div>`; }).join('') || '<p class="empty">Aucun score enregistré. Choisissez un apprenant avant de lancer une série pour garder son résultat.</p>'}</div></div></div>`;
+  }
+  if (Q.etat === 'fin') {
+    const sc = Q.rep.filter((r, i) => r === Q.items[i].b).length; const N = Q.items.length;
+    const verdict = Q.mode === 'examen' ? (sc >= seuil ? `Examen blanc réussi (seuil : ${seuil}/${N}).` : `Examen blanc non réussi : il faut au moins ${seuil}/${N}.`) : (sc >= 9 ? 'Excellent, niveau examen.' : sc >= 7 ? 'Bon résultat, encore un peu de révision.' : 'À retravailler : relisez les leçons puis refaites une série.');
+    return h + `<div class="quiz"><div class="qcard"><p class="note">${modeName(Q.mode)} terminé${Q.app ? ' · ' + esc(nomC(appById(Q.app))) : ''}</p><div class="score" style="color:${Q.mode === 'examen' ? (sc >= seuil ? 'var(--ok)' : 'var(--bad)') : 'inherit'}">${sc} / ${N}</div><p>${verdict}</p><div class="qprog">${Q.items.map((it, i) => `<i class="${Q.rep[i] === it.b ? 'ok' : 'ko'}"></i>`).join('')}</div><div class="row"><button class="btn" data-act="qz-again">Nouvelle série</button><a class="btn ghost" href="#code">Revoir les leçons</a></div></div>
+    <div class="card"><h3>Correction</h3><div class="list">${Q.items.map((it, i) => `<div class="li"><div class="t"><b>${i + 1}. ${it.kind === 'sign' ? 'Panneau : ' + esc(it.c[it.b]) : esc(it.q)}</b><small>${Q.rep[i] === it.b ? 'Bonne réponse' : (Q.rep[i] == null ? 'Sans réponse' : 'Votre réponse : ' + esc(it.c[Q.rep[i]])) + ' — Bonne réponse : ' + esc(it.c[it.b])}</small></div><span class="pill ${Q.rep[i] === it.b ? 'ok' : 'bad'}">${Q.rep[i] === it.b ? '✓' : '✗'}</span></div>`).join('')}</div></div></div>`;
+  }
+  const it = Q.items[Q.i]; const ans = Q.rep[Q.i]; const exam = Q.mode === 'examen';
+  const prog = Q.items.map((x, i) => `<i class="${exam ? (i < Q.i ? 'cur' : '') : (i < Q.i || (i === Q.i && ans != null) ? (Q.rep[i] === x.b ? 'ok' : 'ko') : i === Q.i ? 'cur' : '')}"></i>`).join('');
+  const btnCls = k => exam ? (Q.sel === k ? 'sel' : '') : (ans != null ? (k === it.b ? 'good' : k === ans ? 'bad' : '') : '');
+  return h + `<div class="quiz"><div class="row" style="justify-content:space-between"><span class="note">Question ${Q.i + 1} sur ${Q.items.length}</span>${exam ? `<span class="timer" id="qz-timer">--:--</span>` : ''}</div><div class="qprog">${prog}</div>
+    <div class="qcard">${it.g ? `<div class="pic">${svg(it.g)}</div>` : ''}<h3 style="font-size:1.3rem">${esc(it.q)}</h3>
+    <div class="choices">${it.c.map((c, k) => `<button data-act="qz-ans" data-k="${k}" ${!exam && ans != null ? 'disabled' : ''} class="${btnCls(k)}"><span class="k">${'ABCD'[k]}</span>${esc(c)}</button>`).join('')}</div>
+    ${exam ? `<div><button class="btn" data-act="qz-valid" ${Q.sel == null ? 'disabled' : ''}>${Q.i + 1 < Q.items.length ? 'Valider et continuer' : 'Valider et terminer'}</button></div>` :
+      ans != null ? `<div class="expl"><b>${ans === it.b ? 'Bonne réponse.' : 'Mauvaise réponse.'}</b> ${esc(it.e)}</div><div><button class="btn" data-act="qz-next">${Q.i + 1 < Q.items.length ? 'Question suivante' : 'Voir le résultat'}</button></div>` : ''}
+    </div><div><button class="btn link" data-act="qz-quit">Abandonner</button></div></div>`;
+}
+
+/* ---- Paramètres ---- */
+function vParametres() {
+  const c = cfg(); const ex = COLS.reduce((n, k) => n + S[k].filter(x => x.exemple).length, 0);
+  let theme = 'auto'; try { theme = localStorage.getItem('ae-theme') || 'auto'; } catch (e) {}
+  const standalone = window.matchMedia && matchMedia('(display-mode: standalone)').matches;
+  return head('Paramètres', 'Identité de l’école, sauvegardes, sécurité et installation') +
+  `<form id="frm-cfg" class="card form" style="max-width:820px"><h3>Identité de l’auto-école</h3><p class="note">Ces informations apparaissent sur les reçus, fiches d’inscription et attestations.</p><div class="grid2">
+    <label class="f"><span>Nom de l’auto-école</span><input id="c-nom" name="nom" value="${esc(c.nom)}" required></label>
+    <label class="f"><span>N° d’agrément</span><input id="c-agr" name="agrement" value="${esc(c.agrement || '')}"></label>
+    <label class="f"><span>Adresse</span><input id="c-adr" name="adresse" value="${esc(c.adresse || '')}"></label>
+    <label class="f"><span>Ville</span><input id="c-ville" name="ville" value="${esc(c.ville || '')}"></label>
+    <label class="f"><span>Téléphone</span><input id="c-tel" name="telephone" value="${esc(c.telephone || '')}"></label>
+    <label class="f"><span>E-mail</span><input id="c-mail" name="email" type="email" value="${esc(c.email || '')}"></label>
+    <label class="f"><span>NIF / RCCM</span><input id="c-nif" name="nif" value="${esc(c.nif || '')}"></label>
+    <label class="f"><span>Devise</span><input id="c-devise" name="devise" value="${esc(c.devise)}" placeholder="FCFA, €, MAD, DA…"></label>
+    <label class="f"><span>Seuil de réussite de l’examen blanc (sur 40)</span><input id="c-seuil" name="seuilCode" type="number" min="1" max="40" value="${esc(c.seuilCode)}"></label>
+    <label class="f"><span>Signataire des documents</span><input id="c-dir" name="directeur" value="${esc(c.directeur || '')}" placeholder="Nom du directeur ou de la directrice"></label>
+  </div>
+  <div class="row">${c.logo ? `<img class="logo-prev" src="${esc(c.logo)}" alt="Logo">` : '<span class="note">Aucun logo</span>'}<button type="button" class="btn ghost sm w" data-act="logo">${c.logo ? 'Changer le logo' : 'Ajouter un logo'}</button>${c.logo ? '<button type="button" class="btn link sm w" data-act="logo-del">Retirer</button>' : ''}</div>
+  <div class="w"><button class="btn">Enregistrer</button></div></form>
+
+  <div class="card" style="max-width:820px"><h3>Sauvegarde et restauration</h3><p>Téléchargez régulièrement une copie complète de vos données (fichier .json). Vous pourrez la restaurer sur cet appareil ou sur un autre.</p>
+    <div class="row" style="margin-top:10px"><button class="btn" data-act="backup">Télécharger une sauvegarde</button><button class="btn ghost w" data-act="restore">Restaurer une sauvegarde…</button></div>
+    ${c.lastBackup ? `<p class="note" style="margin-top:8px">Dernière sauvegarde : ${fmtLong(c.lastBackup)}</p>` : ''}</div>
+
+  ${S.mode === 'local' ? `<div class="card" style="max-width:820px"><h3>Code d’accès</h3><p>Protégez l’ouverture de l’application sur cet appareil par un code.</p>
+    <form id="frm-pin" class="row" style="margin-top:10px"><input id="pin-new" type="password" inputmode="numeric" minlength="4" placeholder="${c.pinHash ? 'Nouveau code' : 'Code (4 chiffres ou plus)'}" style="background:var(--surface-2);border:1px solid var(--line);border-radius:8px;padding:8px 10px" aria-label="Nouveau code"><button class="btn">${c.pinHash ? 'Changer le code' : 'Activer le code'}</button>${c.pinHash ? '<button type="button" class="btn ghost" data-act="pin-off">Désactiver</button><button type="button" class="btn ghost" data-act="lock-now">Verrouiller maintenant</button>' : ''}</form>
+    <p class="note" style="margin-top:8px">Le code empêche l’accès rapide à l’application. Pour une protection complète, verrouillez aussi la session de l’ordinateur ou du téléphone.</p></div>` : ''}
+
+  ${!IN_ARTIFACT ? `<div class="card" style="max-width:820px"><h3>Apparence</h3><div class="tabs" role="group" aria-label="Thème">${[['auto', 'Automatique'], ['light', 'Clair'], ['dark', 'Sombre']].map(([k, l]) => `<button data-act="theme" data-v="${k}" aria-pressed="${theme === k}">${l}</button>`).join('')}</div></div>` : ''}
+
+  <div class="card" style="max-width:820px"><h3>Installer l’application</h3>
+    ${standalone ? '<p><span class="pill ok">Installée</span> L’application fonctionne en mode autonome, même sans connexion.</p>' : deferredInstall ? '<p><button class="btn" data-act="install">Installer sur cet appareil</button></p>' : ''}
+    <ul class="steps"><li><b>Windows, Mac, Linux</b> : ouvrez l’application dans Chrome ou Edge, puis cliquez sur l’icône d’installation à droite de la barre d’adresse (ou menu ⋮ › « Installer »). Des installateurs classiques (.exe, .dmg, .AppImage) sont aussi fournis avec la version bureau.</li><li><b>Android</b> : dans Chrome, menu ⋮ › « Installer l’application » ou « Ajouter à l’écran d’accueil ».</li><li><b>iPhone, iPad</b> : dans Safari, bouton Partager › « Sur l’écran d’accueil ».</li></ul>
+    ${IN_ARTIFACT ? '<p class="note" style="margin-top:8px">Cette page en ligne est la version partagée. La version installable se trouve dans le dossier du projet fourni avec l’application.</p>' : ''}</div>
+
+  ${ex ? `<div class="card w" style="max-width:820px"><h3>Données d’exemple</h3><p>${ex} élément(s) marqués « exemple » servent à montrer le fonctionnement. Supprimez-les quand vous saisissez vos vraies données.</p><p style="margin-top:10px"><button class="btn danger" data-act="purge-ex">Supprimer les données d’exemple</button></p></div>` : ''}
+  <p class="note">${S.mode === 'db' ? 'Les données sont enregistrées en ligne et partagées avec les personnes à qui vous donnez accès.' : 'Les données sont enregistrées sur cet appareil uniquement. Pensez aux sauvegardes.'} Version ${APP_VERSION}.</p>`;
+}
+
+/* ============ Dialogues & formulaires ============ */
+const dlg = $('#dlg');
+function openDlg(html) { $('#dlg-body').innerHTML = html; if (!dlg.open) { try { dlg.showModal(); } catch (e) { dlg.setAttribute('open', ''); } } }
+function closeDlg() { try { dlg.close(); } catch (e) { dlg.removeAttribute('open'); } }
+dlg.addEventListener('click', e => { if (e.target === dlg) closeDlg(); });
+const dhead = t => `<header class="dh"><h2>${t}</h2><button type="button" class="icon" data-act="close" aria-label="Fermer">×</button></header>`;
+const inp = (label, name, val, attrs = '', type = 'text') => `<label class="f"><span>${label}</span><input id="i-${name}" name="${name}" type="${type}" value="${esc(val ?? '')}" ${attrs}></label>`;
+const sel = (label, name, val, opts, attrs = '') => `<label class="f"><span>${label}</span><select id="i-${name}" name="${name}" ${attrs}>${opts.map(([k, v]) => `<option value="${esc(k)}" ${String(val ?? '') === String(k) ? 'selected' : ''}>${esc(v)}</option>`).join('')}</select></label>`;
+const area = (label, name, val) => `<label class="f"><span>${label}</span><textarea id="i-${name}" name="${name}">${esc(val ?? '')}</textarea></label>`;
+const fd = form => Object.fromEntries(new FormData(form).entries());
+const footer = (delAct, id) => `<footer class="df">${delAct && id ? `<button type="button" class="btn ghost" data-act="${delAct}" data-id="${id}">Supprimer</button>` : ''}<button type="button" class="btn ghost" data-act="close">Annuler</button><button class="btn">Enregistrer</button></footer>`;
+let toastT = 0;
+function toast(m) { const t = $('#toast'); t.textContent = m; t.hidden = false; clearTimeout(toastT); toastT = setTimeout(() => t.hidden = true, 3400); }
+
+/* ---- Apprenant : formulaire ---- */
+function formApprenant(a) {
+  const isNew = !a; a = a || { statut: 'inscrit', dateInscription: todayISO(), categorie: (catsSorted().find(c => c.code === 'B') || catsSorted()[0] || {}).code };
+  const cats = catsSorted(); let photo = a.photo || '';
+  openDlg(`<form id="frm-app" class="form" data-id="${a.id || ''}">${dhead(isNew ? 'Inscrire un apprenant' : 'Modifier l’apprenant')}
+    <div class="row">${avatar(a)}<button type="button" class="btn ghost sm" id="btn-photo">${a.photo ? 'Changer la photo' : 'Ajouter une photo'}</button><span class="note">${isNew ? 'N° de dossier attribué automatiquement' : 'Dossier ' + esc(a.dossier || '—')}</span></div>
+    <p class="section-title">Identité</p>
+    <div class="grid2">${inp('Nom', 'nom', a.nom, 'required autocomplete="off"')}${inp('Prénom(s)', 'prenom', a.prenom, 'required autocomplete="off"')}
+    ${sel('Sexe', 'sexe', a.sexe, [['', '—'], ['F', 'Féminin'], ['M', 'Masculin']])}${inp('Date de naissance', 'dateNaissance', a.dateNaissance, '', 'date')}
+    ${inp('Lieu de naissance', 'lieuNaissance', a.lieuNaissance)}${inp('Nationalité', 'nationalite', a.nationalite)}
+    ${inp('N° pièce d’identité', 'piece', a.piece)}${inp('Profession', 'profession', a.profession)}</div>
+    <p class="section-title">Contact</p>
+    <div class="grid2">${inp('Téléphone', 'telephone', a.telephone, '', 'tel')}${inp('E-mail', 'email', a.email, '', 'email')}
+    ${inp('Adresse', 'adresse', a.adresse)}${inp('Personne à prévenir (nom et téléphone)', 'urgence', a.urgence)}</div>
+    <p class="section-title">Formation</p>
+    <div class="grid2">${sel('Catégorie de permis', 'categorie', a.categorie, cats.length ? cats.map(c => [c.code, c.code + ' — ' + c.libelle]) : [['', 'Aucune catégorie : ajoutez-en d’abord']])}
+    ${sel('Statut', 'statut', a.statut, Object.entries(STATUTS))}
+    ${inp('Date d’inscription', 'dateInscription', a.dateInscription, 'required', 'date')}
+    ${inp('Coût total de la formation (' + esc(cfg().devise) + ')', 'montantTotal', a.montantTotal, 'min="0" step="any"', 'number')}
+    ${inp('N° de livret / dossier préfecture', 'numLivret', a.numLivret)}${inp('Date d’obtention du permis', 'datePermis', a.datePermis, '', 'date')}</div>
+    ${area('Notes', 'notes', a.notes)}
+    <p class="warn-t" id="age-warn" hidden></p>
+    ${footer()}</form>`);
+  const f = $('#frm-app');
+  $('#btn-photo').onclick = async () => { const file = await pickFile('image/*'); if (!file) return; try { photo = await resizeImage(file, 260); f.querySelector('.avatar').innerHTML = `<img src="${photo}" alt="">`; } catch (e) { toast('Image illisible.'); } };
+  const check = () => { const c = catBy(f.categorie.value); const ag = age(f.dateNaissance.value); const w = $('#age-warn');
+    if (c && ag != null && c.ageMin && ag < c.ageMin) { w.textContent = `Attention : ${ag} ans, l’âge minimum pour la catégorie ${c.code} est ${c.ageMin} ans.`; w.hidden = false; } else w.hidden = true;
+    if (c && c.tarif && !f.montantTotal.value) f.montantTotal.value = c.tarif; };
+  f.categorie.addEventListener('change', check); f.dateNaissance.addEventListener('change', check); check();
+  f.addEventListener('submit', async e => { e.preventDefault(); const d = fd(f); const id = f.dataset.id || uid(); const old = appById(id) || {};
+    const row = { ...old, ...d, nom: d.nom.trim().toUpperCase(), prenom: d.prenom.trim(), montantTotal: Number(d.montantTotal) || 0, paiements: old.paiements || [], photo, dossier: old.dossier || nextDossier() };
+    if (!photo) delete row.photo;
+    try { await put('apprenants', id, row); toast(isNew ? 'Apprenant inscrit · dossier ' + row.dossier : 'Modifications enregistrées'); S.appTab = 'resume'; openApp(id, row); } catch (e) {} });
+}
+
+/* ---- Apprenant : fiche détaillée ---- */
+function openApp(id, fallback) {
+  const a = appById(id) || (fallback ? { ...fallback, id } : null); if (!a) return;
+  const c = catBy(a.categorie); const m = minutesConduite(a); const req = (c && c.heuresConduite) || 0; const pct = req ? Math.min(100, Math.round(100 * m / 60 / req)) : 0;
+  const ag = age(a.dateNaissance);
+  const tabs = [['resume', 'Résumé'], ['paiements', 'Paiements'], ['livret', 'Livret'], ['seances', 'Séances et examens'], ['dossier', 'Dossier et documents']];
+  let body = '';
+  if (S.appTab === 'resume') {
+    const qz = S.quiz.filter(q => q.apprenantId === a.id).sort((x, y) => String(y.date).localeCompare(String(x.date)));
+    body = `<div class="info"><div><span>N° de dossier</span><b>${esc(a.dossier || '—')}</b></div><div><span>Téléphone</span><b>${esc(a.telephone || '—')}</b></div><div><span>Naissance</span><b>${fmtDate(a.dateNaissance)}${ag != null ? ` (${ag} ans)` : ''}</b></div><div><span>Pièce d’identité</span><b>${esc(a.piece || '—')}</b></div><div><span>Adresse</span><b>${esc(a.adresse || '—')}</b></div><div><span>Personne à prévenir</span><b>${esc(a.urgence || '—')}</b></div><div><span>Inscription</span><b>${fmtDate(a.dateInscription)}</b></div>${a.datePermis ? `<div><span>Permis obtenu</span><b>${fmtDate(a.datePermis)}</b></div>` : ''}</div>
+    ${a.notes ? `<p class="expl">${esc(a.notes)}</p>` : ''}
+    <div class="sect"><h3>Progression</h3>
+      <div class="hbar" style="grid-template-columns:120px minmax(0,1fr) 110px"><span>Conduite</span><div class="bar ${pct >= 100 ? 'ok' : ''}"><i style="width:${pct}%"></i></div><b class="num" style="text-align:right">${fmtH(m)}${req ? ' / ' + req + ' h' : ''}</b></div>
+      <div class="hbar" style="grid-template-columns:120px minmax(0,1fr) 110px"><span>Code</span><div class="bar"><i style="width:${c && c.heuresCode ? Math.min(100, Math.round(100 * minutesCode(a) / 60 / c.heuresCode)) : 0}%"></i></div><b class="num" style="text-align:right">${fmtH(minutesCode(a))}${c && c.heuresCode ? ' / ' + c.heuresCode + ' h' : ''}</b></div>
+      <div class="hbar" style="grid-template-columns:120px minmax(0,1fr) 110px"><span>Compétences</span><div class="bar"><i style="width:${livretPct(a)}%"></i></div><b class="num" style="text-align:right">${livretPct(a)} %</b></div>
+      <div class="hbar" style="grid-template-columns:120px minmax(0,1fr) 110px"><span>Paiement</span><div class="bar ok"><i style="width:${a.montantTotal ? Math.min(100, Math.round(100 * paye(a) / a.montantTotal)) : 0}%"></i></div><b class="num" style="text-align:right">${money(paye(a))}</b></div></div>
+    ${qz.length ? `<div class="sect"><h3>Scores au code</h3><div class="row">${qz.slice(0, 12).map(q => `<span class="pill ${q.total === 40 ? (q.score >= (Number(cfg().seuilCode) || 35) ? 'ok' : 'bad') : q.score >= 8 ? 'ok' : q.score >= 5 ? 'warn' : 'bad'} num" title="${fmtDate(q.date)}">${q.score}/${q.total}</span>`).join('')}</div></div>` : ''}`;
+  } else if (S.appTab === 'paiements') {
+    body = `<div class="kpis"><div class="kpi"><span>Coût total</span><b class="num" style="font-size:1.3rem">${money(a.montantTotal)}</b></div><div class="kpi"><span>Payé</span><b class="num" style="font-size:1.3rem">${money(paye(a))}</b></div><div class="kpi"><span>Reste</span><b class="num" style="font-size:1.3rem;color:${reste(a) ? 'var(--warn)' : 'var(--ok)'}">${money(reste(a))}</b></div></div>
+    <div class="list">${(a.paiements || []).map((p, i) => `<div class="li"><div class="t"><b class="num">${money(p.montant)}</b><small>${fmtDate(p.date)} · ${esc(p.mode || '')} · ${esc(p.no || '')}${p.motif ? ' · ' + esc(p.motif) : ''}</small></div><div class="row" style="flex-wrap:nowrap"><button class="btn ghost sm" data-act="recu" data-id="${a.id}" data-i="${i}">Reçu</button><button class="btn link sm w" data-act="del-pay" data-id="${a.id}" data-i="${i}">Retirer</button></div></div>`).join('') || '<p class="empty">Aucun paiement enregistré.</p>'}</div>
+    <form id="frm-pay" class="payrow w" data-id="${a.id}"><label class="f"><span>Montant</span><input id="p-montant" name="montant" type="number" min="1" step="any" required value="${reste(a) || ''}"></label><label class="f"><span>Date</span><input id="p-date" name="date" type="date" value="${todayISO()}" required></label><label class="f"><span>Mode</span><select id="p-mode" name="mode">${MODES_PAY.map(x => `<option>${x}</option>`).join('')}</select></label><label class="f"><span>Motif</span><input id="p-motif" name="motif" placeholder="Acompte, frais d’examen…"></label><button class="btn">Encaisser</button></form>
+    <div class="row"><button class="btn ghost sm" data-act="releve" data-id="${a.id}">Imprimer le relevé de compte</button></div>`;
+  } else if (S.appTab === 'livret') {
+    const lv = a.livret || {};
+    body = `<p class="note">Évaluez chaque compétence au fil des leçons. Progression globale : <b>${livretPct(a)} %</b>.</p><div class="livret">${COMPETENCES.map((g, gi) => `<div><h4>${gi + 1}. ${esc(g.g)}</h4>${g.items.map((it, ii) => { const k = gi + '-' + ii, v = Number(lv[k] || 0); return `<div class="comp"><span>${esc(it)}</span><select id="lv-${k}" class="lv${v}" data-act-change="livret" data-app="${a.id}" data-k="${k}" aria-label="${esc(it)}" ${S.ro ? 'disabled' : ''}>${NIVEAUX.map((n, x) => `<option value="${x}" ${x === v ? 'selected' : ''}>${n}</option>`).join('')}</select></div>`; }).join('')}</div>`).join('')}</div>`;
+  } else if (S.appTab === 'seances') {
+    const seances = S.seances.filter(s => s.apprenantId === a.id).sort((x, y) => (y.date + y.heure).localeCompare(x.date + x.heure));
+    const exams = S.examens.filter(e => (e.candidats || []).some(x => x.id === a.id)).sort(by('date'));
+    body = `<div class="sect"><h3>Séances (${seances.length})</h3><div class="list">${seances.slice(0, 30).map(s => `<div class="li"><div class="t"><b>${fmtDate(s.date)} · ${esc(s.heure || '')} · ${s.type === 'code' ? 'Code' : 'Conduite'} (${fmtH(+s.duree || 0)})</b><small>${esc(s.moniteur || '')}${s.notes ? ' · ' + esc(s.notes) : ''}</small></div><span class="pill ${s.statut === 'effectuee' ? 'ok' : s.statut === 'annulee' ? 'bad' : ''}">${SEANCE_ST[s.statut]}</span></div>`).join('') || '<p class="empty">Aucune séance.</p>'}</div><div class="w"><button class="btn ghost sm" data-act="new-seance" data-app="${a.id}">Planifier une séance</button></div></div>
+    <div class="sect"><h3>Examens</h3><div class="list">${exams.map(e => { const r = e.candidats.find(x => x.id === a.id).resultat; return `<div class="li"><div class="t"><b>${fmtDate(e.date)} · ${esc(EXT[e.type] || e.type)}</b><small>${esc(e.lieu || '')}</small></div><span class="pill ${RES_CLS[r] || ''}">${RES[r] || r}</span></div>`; }).join('') || '<p class="empty">Pas encore inscrit à un examen.</p>'}</div></div>`;
+  } else {
+    const dc = a.docs || {};
+    body = `<div class="sect"><h3>Pièces du dossier</h3><div class="docs">${DOCS.map((d, i) => `<label><input type="checkbox" id="doc-${i}" data-act-change="doc" data-app="${a.id}" data-i="${i}" ${dc[i] ? 'checked' : ''} ${S.ro ? 'disabled' : ''}> ${esc(d)}</label>`).join('')}</div></div>
+    <div class="sect"><h3>Documents à imprimer</h3><div class="row"><button class="btn ghost" data-act="fiche" data-id="${a.id}">Fiche d’inscription</button><button class="btn ghost" data-act="contrat" data-id="${a.id}">Contrat de formation</button><button class="btn ghost" data-act="attestation" data-id="${a.id}">Attestation de formation</button><button class="btn ghost" data-act="releve" data-id="${a.id}">Relevé de compte</button></div>
+    <p class="note">${IN_ARTIFACT ? 'Ici, chaque document est téléchargé en fichier .html qui s’imprime à l’ouverture.' : 'Le document s’ouvre dans la fenêtre d’impression : choisissez votre imprimante ou « Enregistrer en PDF ».'}</p></div>`;
+  }
+  openDlg(`${dhead(esc(nomC(a)))}
+    <div class="row">${avatar(a)}<div style="display:grid;gap:6px"><div class="row">${statutPill(a.statut)}<span class="catbadge">${esc(a.categorie || '?')}</span>${c ? `<span class="note">${esc(c.libelle)}</span>` : ''}${exPill(a)}</div><span class="note">Dossier ${esc(a.dossier || '—')}</span></div></div>
+    <div class="dtabs" role="group" aria-label="Sections de la fiche">${tabs.map(([k, l]) => `<button data-act="apptab" data-v="${k}" data-id="${a.id}" aria-pressed="${S.appTab === k}">${l}</button>`).join('')}</div>
+    ${body}
+    <footer class="df w"><button class="btn ghost" data-act="del-app" data-id="${a.id}">Supprimer le dossier</button><button class="btn" data-act="edit-app" data-id="${a.id}">Modifier</button></footer>`);
+  const pf = $('#frm-pay');
+  if (pf) pf.addEventListener('submit', async e => { e.preventDefault(); const d = fd(pf); const cur = appById(a.id) || a;
+    const p = { montant: Number(d.montant), date: d.date, mode: d.mode, motif: d.motif.trim(), no: nextRecu() };
+    const row = { ...cur, paiements: [...(cur.paiements || []), p] };
+    try { await put('apprenants', a.id, row); toast('Paiement enregistré · reçu ' + p.no); openApp(a.id, row); } catch (e) {} });
+}
+
+/* ---- Documents imprimables ---- */
+function docRecu(a, i) {
+  const p = (a.paiements || [])[i]; if (!p) return; const c = cfg();
+  const avant = sum((a.paiements || []).slice(0, i), x => x.montant);
+  printDoc('Reçu ' + (p.no || ''), docHead('Reçu de paiement', `N° ${esc(p.no || '—')}<br>Le ${fmtLong(p.date)}`) +
+    `<table><tr><th style="width:35%">Reçu de</th><td><b>${esc(nomC(a))}</b> — dossier ${esc(a.dossier || '—')}</td></tr><tr><th>Formation</th><td>Permis ${esc(a.categorie || '')} ${catBy(a.categorie) ? '— ' + esc(catBy(a.categorie).libelle) : ''}</td></tr><tr><th>Motif</th><td>${esc(p.motif || 'Frais de formation')}</td></tr><tr><th>Mode de paiement</th><td>${esc(p.mode || '')}</td></tr><tr><th>Montant</th><td class="big">${money(p.montant)}</td></tr><tr><th>Arrêté à la somme de</th><td><i>${esc(enLettres(p.montant))} ${esc(c.devise || '')}</i></td></tr></table>
+    <h2>Situation du compte</h2><table><tr><th>Coût total de la formation</th><th>Déjà versé avant ce reçu</th><th>Ce versement</th><th>Reste à payer</th></tr><tr><td>${money(a.montantTotal)}</td><td>${money(avant)}</td><td>${money(p.montant)}</td><td><b>${money(Math.max(0, (a.montantTotal || 0) - avant - p.montant))}</b></td></tr></table>
+    <div class="sign"><div>Signature de l’apprenant</div><div>Pour ${esc(c.nom)}${c.directeur ? '<br>' + esc(c.directeur) : ''}</div></div>`);
+}
+function docFiche(a) {
+  const c = catBy(a.categorie);
+  printDoc('Fiche inscription ' + nomC(a), docHead('Fiche d’inscription', `Dossier ${esc(a.dossier || '—')}<br>Inscrit le ${fmtLong(a.dateInscription)}`) +
+    `<div style="display:flex;gap:18px;align-items:flex-start">${a.photo ? `<img src="${esc(a.photo)}" style="width:110px;height:140px;object-fit:cover;border:1px solid #999">` : '<div style="width:110px;height:140px;border:1px dashed #999;display:grid;place-items:center;font-size:9pt;color:#666">Photo</div>'}
+    <table style="flex:1"><tr><th>Nom</th><td><b>${esc(a.nom || '')}</b></td><th>Prénom(s)</th><td>${esc(a.prenom || '')}</td></tr><tr><th>Né(e) le</th><td>${fmtDate(a.dateNaissance)}</td><th>À</th><td>${esc(a.lieuNaissance || '')}</td></tr><tr><th>Sexe</th><td>${esc(a.sexe || '')}</td><th>Nationalité</th><td>${esc(a.nationalite || '')}</td></tr><tr><th>Pièce d’identité</th><td>${esc(a.piece || '')}</td><th>Profession</th><td>${esc(a.profession || '')}</td></tr><tr><th>Téléphone</th><td>${esc(a.telephone || '')}</td><th>E-mail</th><td>${esc(a.email || '')}</td></tr><tr><th>Adresse</th><td colspan="3">${esc(a.adresse || '')}</td></tr><tr><th>Personne à prévenir</th><td colspan="3">${esc(a.urgence || '')}</td></tr></table></div>
+    <h2>Formation choisie</h2><table><tr><th>Catégorie</th><td><b>${esc(a.categorie || '')}</b> — ${esc(c ? c.libelle : '')}</td></tr><tr><th>Volume prévu</th><td>${c ? `${c.heuresCode} h de code, ${c.heuresConduite} h de conduite` : ''}</td></tr><tr><th>Coût de la formation</th><td>${money(a.montantTotal)}</td></tr></table>
+    <h2>Pièces fournies</h2><table>${DOCS.map((d, i) => `<tr><td style="width:30px;text-align:center">${(a.docs || {})[i] ? '☑' : '☐'}</td><td>${esc(d)}</td></tr>`).join('')}</table>
+    <p class="small">Je soussigné(e) certifie l’exactitude des renseignements ci-dessus et déclare avoir pris connaissance du règlement intérieur de l’établissement.</p>
+    <div class="sign"><div>Date et signature de l’apprenant</div><div>Cachet et signature de l’auto-école</div></div>`);
+}
+function docContrat(a) {
+  const c = catBy(a.categorie), k = cfg();
+  printDoc('Contrat ' + nomC(a), docHead('Contrat de formation', `Dossier ${esc(a.dossier || '—')}`) +
+    `<p>Entre <b>${esc(k.nom)}</b>${k.agrement ? ', agrément n° ' + esc(k.agrement) : ''}, ${esc([k.adresse, k.ville].filter(Boolean).join(', '))}, ci-après « l’établissement »,</p><p>et <b>${esc(nomC(a))}</b>, né(e) le ${fmtDate(a.dateNaissance)}, pièce d’identité n° ${esc(a.piece || '…')}, ci-après « l’élève »,</p><p>il est convenu ce qui suit.</p>
+    <h2>Article 1 — Objet</h2><p>L’établissement s’engage à dispenser à l’élève la formation théorique et pratique préparant au permis de conduire de catégorie <b>${esc(a.categorie || '')}</b>${c ? ' (' + esc(c.libelle) + ')' : ''}.</p>
+    <h2>Article 2 — Contenu et durée</h2><p>La formation comprend environ ${c ? c.heuresCode : '…'} heures de cours de code et ${c ? c.heuresConduite : '…'} heures de conduite. Ce volume est indicatif : il peut être ajusté selon la progression constatée dans le livret d’apprentissage.</p>
+    <h2>Article 3 — Prix et paiement</h2><p>Le coût de la formation est fixé à <b>${money(a.montantTotal)}</b> (${esc(enLettres(a.montantTotal || 0))} ${esc(k.devise || '')}). Chaque versement donne lieu à un reçu numéroté.</p>
+    <h2>Article 4 — Obligations de l’élève</h2><p>L’élève s’engage à être ponctuel, à prévenir au moins 24 heures à l’avance en cas d’absence à une leçon et à respecter le règlement intérieur. Une leçon non décommandée à temps peut être due.</p>
+    <h2>Article 5 — Présentation aux examens</h2><p>L’établissement présente l’élève aux examens lorsque son niveau le permet. Les frais d’examen éventuels sont précisés lors de l’inscription.</p>
+    <h2>Article 6 — Résiliation</h2><p>Le contrat peut être résilié par l’une ou l’autre des parties par écrit. Les prestations effectuées restent dues.</p>
+    <p style="margin-top:16px">Fait en deux exemplaires, le ${fmtLong(todayISO())}${k.ville ? ', à ' + esc(k.ville) : ''}.</p>
+    <div class="sign"><div>L’élève (« lu et approuvé »)</div><div>Pour l’établissement${k.directeur ? '<br>' + esc(k.directeur) : ''}</div></div>`);
+}
+function docAttestation(a) {
+  const c = catBy(a.categorie), k = cfg();
+  printDoc('Attestation ' + nomC(a), docHead('Attestation de formation', `Dossier ${esc(a.dossier || '—')}`) +
+    `<p style="margin-top:20px">Je soussigné(e) ${esc(k.directeur || '…………………………')}, responsable de l’établissement d’enseignement de la conduite <b>${esc(k.nom)}</b>${k.agrement ? ' (agrément n° ' + esc(k.agrement) + ')' : ''}, atteste que :</p>
+    <p class="big" style="text-align:center;margin:18px 0">${esc(nomC(a))}</p>
+    <p>né(e) le ${fmtDate(a.dateNaissance)}${a.lieuNaissance ? ' à ' + esc(a.lieuNaissance) : ''}, a suivi dans notre établissement la formation au permis de conduire de catégorie <b>${esc(a.categorie || '')}</b>${c ? ' (' + esc(c.libelle) + ')' : ''}, depuis le ${fmtLong(a.dateInscription)}.</p>
+    <table><tr><th>Heures de code effectuées</th><td>${fmtH(minutesCode(a))}</td></tr><tr><th>Heures de conduite effectuées</th><td>${fmtH(minutesConduite(a))}</td></tr><tr><th>Compétences acquises (livret)</th><td>${livretPct(a)} %</td></tr>${a.datePermis ? `<tr><th>Permis obtenu le</th><td>${fmtLong(a.datePermis)}</td></tr>` : ''}</table>
+    <p>Cette attestation est délivrée à l’intéressé(e) pour servir et valoir ce que de droit.</p>
+    <p style="margin-top:16px">Fait le ${fmtLong(todayISO())}${k.ville ? ', à ' + esc(k.ville) : ''}.</p>
+    <div class="sign"><div style="visibility:hidden">—</div><div>Signature et cachet<br><span class="stamp">${esc(k.nom)}</span></div></div>`);
+}
+function docReleve(a) {
+  printDoc('Relevé ' + nomC(a), docHead('Relevé de compte', `${esc(nomC(a))}<br>Dossier ${esc(a.dossier || '—')}`) +
+    `<table><tr><th>Date</th><th>N° reçu</th><th>Mode</th><th>Motif</th><th style="text-align:right">Montant</th></tr>${(a.paiements || []).map(p => `<tr><td>${fmtDate(p.date)}</td><td>${esc(p.no || '')}</td><td>${esc(p.mode || '')}</td><td>${esc(p.motif || '')}</td><td style="text-align:right">${money(p.montant)}</td></tr>`).join('') || '<tr><td colspan="5">Aucun paiement</td></tr>'}
+    <tr><th colspan="4">Total versé</th><th style="text-align:right">${money(paye(a))}</th></tr><tr><th colspan="4">Coût de la formation</th><th style="text-align:right">${money(a.montantTotal)}</th></tr><tr><th colspan="4">Reste à payer</th><th style="text-align:right">${money(reste(a))}</th></tr></table>
+    <p class="small">Relevé édité le ${fmtLong(todayISO())}.</p>`);
+}
+function docExamen(e) {
+  printDoc('Examen ' + e.date, docHead('Liste des candidats', `${esc(EXT[e.type] || e.type)} — catégorie ${esc(e.categorie || '')}<br>${fmtDate(e.date, { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}${e.heure ? ' à ' + esc(e.heure) : ''}`) +
+    `<p>Lieu : <b>${esc(e.lieu || '—')}</b>${e.examinateur ? ' · Examinateur : ' + esc(e.examinateur) : ''}</p>
+    <table><tr><th>#</th><th>Nom et prénom(s)</th><th>Dossier</th><th>Né(e) le</th><th>Pièce d’identité</th><th>Résultat</th></tr>${(e.candidats || []).map((c, i) => { const a = appById(c.id); return `<tr><td>${i + 1}</td><td>${esc(nomC(a))}</td><td>${esc(a?.dossier || '')}</td><td>${a ? fmtDate(a.dateNaissance) : ''}</td><td>${esc(a?.piece || '')}</td><td>${c.resultat === 'attente' ? '' : esc(RES[c.resultat] || '')}</td></tr>`; }).join('')}</table>
+    <div class="sign"><div>Le responsable de l’établissement</div><div>L’examinateur</div></div>`);
+}
+function docSemaine() {
+  const days = [...Array(7)].map((_, i) => addDays(S.week, i));
+  printDoc('Planning ' + S.week, docHead('Planning de la semaine', `Du ${fmtLong(days[0])} au ${fmtLong(days[6])}${S.moniteur ? '<br>Moniteur : ' + esc(S.moniteur) : ''}`) +
+    days.map(d => { const ss = S.seances.filter(s => s.date === d && (!S.moniteur || s.moniteur === S.moniteur) && s.statut !== 'annulee').sort(by('heure')); return ss.length ? `<h2>${fmtDate(d, { weekday: 'long', day: 'numeric', month: 'long' })}</h2><table><tr><th>Heure</th><th>Type</th><th>Apprenant</th><th>Moniteur</th><th>Véhicule</th></tr>${ss.map(s => `<tr><td>${esc(s.heure)} (${fmtH(+s.duree || 0)})</td><td>${s.type === 'code' ? 'Code' : 'Conduite'}</td><td>${s.apprenantId ? esc(nomC(appById(s.apprenantId))) : esc(s.groupe || 'Collective')}</td><td>${esc(s.moniteur || '')}</td><td>${esc(s.vehicule || '')}</td></tr>`).join('')}</table>` : ''; }).join('') || '<p>Aucune séance cette semaine.</p>');
+}
+
+/* ---- Séance ---- */
+function formSeance(s, preset = {}) {
+  const isNew = !s;
+  s = s || { date: preset.date || todayISO(), heure: '08:00', duree: 60, type: 'conduite', statut: 'prevue', apprenantId: preset.app || '' };
+  const apps = S.apprenants.filter(a => !['abandon', 'diplome'].includes(a.statut) || a.id === s.apprenantId).sort(by('nom'));
+  openDlg(`<form id="frm-se" class="form" data-id="${s.id || ''}">${dhead(isNew ? 'Nouvelle séance' : 'Modifier la séance')}
+    <div class="grid2">${inp('Date', 'date', s.date, 'required', 'date')}${inp('Heure de début', 'heure', s.heure, 'required', 'time')}
+    ${sel('Type', 'type', s.type, [['conduite', 'Conduite'], ['code', 'Code de la route']])}${inp('Durée (minutes)', 'duree', s.duree, 'min="15" step="15" required', 'number')}
+    ${sel('Apprenant', 'apprenantId', s.apprenantId, [['', '— Séance collective / non attribuée —'], ...apps.map(a => [a.id, nomC(a) + ' (' + (a.categorie || '?') + ')'])])}
+    ${inp('Groupe (séance collective)', 'groupe', s.groupe, 'placeholder="ex. Code — groupe du matin"')}
+    ${inp('Moniteur', 'moniteur', s.moniteur, 'list="dl-mon" autocomplete="off"')}${inp('Véhicule', 'vehicule', s.vehicule, 'list="dl-veh" autocomplete="off"')}
+    ${sel('Statut', 'statut', s.statut, Object.entries(SEANCE_ST))}${inp('Kilométrage en fin de séance', 'kmFin', s.kmFin, 'min="0"', 'number')}</div>
+    <datalist id="dl-mon">${allMoniteurs().map(m => `<option value="${esc(m)}">`).join('')}</datalist><datalist id="dl-veh">${allVehicules().map(m => `<option value="${esc(m)}">`).join('')}</datalist>
+    ${area('Observations du moniteur', 'notes', s.notes)}
+    <p class="conflict" id="se-conf" hidden></p>
+    ${footer('del-seance', isNew ? '' : s.id)}</form>`);
+  const f = $('#frm-se');
+  f.addEventListener('input', () => { delete f.dataset.force; $('#se-conf').hidden = true; });
+  f.addEventListener('submit', async e => { e.preventDefault(); const d = fd(f); const id = f.dataset.id || uid(); const old = S.seances.find(x => x.id === id) || {};
+    const row = { ...old, ...d, id, duree: Number(d.duree) || 60, kmFin: d.kmFin ? Number(d.kmFin) : '' };
+    const cf = conflicts(row);
+    if (cf.length && !f.dataset.force) { const w = $('#se-conf'); w.textContent = 'Conflit : ' + cf.map(x => `${x.why.join(', ')} déjà pris à ${x.o.heure}`).join(' ; ') + '. Cliquez à nouveau sur « Enregistrer » pour confirmer.'; w.hidden = false; f.dataset.force = '1'; return; }
+    try {
+      await put('seances', id, row);
+      if (row.kmFin && row.vehicule) { const v = S.vehicules.find(x => vehLabel(x) === row.vehicule); if (v && Number(row.kmFin) > Number(v.km || 0)) await put('vehicules', v.id, { ...v, km: Number(row.kmFin) }); }
+      toast('Séance enregistrée'); closeDlg();
+    } catch (e) {} });
+}
+
+/* ---- Examen ---- */
+function formExamen(e) {
+  const isNew = !e; e = e || { date: addDays(todayISO(), 14), heure: '08:00', type: 'code', categorie: 'B', candidats: [] };
+  openDlg(`<form id="frm-ex" class="form" data-id="${e.id || ''}">${dhead(isNew ? 'Programmer un examen' : 'Modifier l’examen')}
+    <div class="grid2">${inp('Date', 'date', e.date, 'required', 'date')}${inp('Heure', 'heure', e.heure, '', 'time')}
+    ${sel('Épreuve', 'type', e.type, Object.entries(EXT))}${sel('Catégorie', 'categorie', e.categorie, catsSorted().map(c => [c.code, c.code + ' — ' + c.libelle]))}
+    ${inp('Lieu / centre d’examen', 'lieu', e.lieu)}${inp('Examinateur', 'examinateur', e.examinateur)}
+    ${inp('Frais d’examen par candidat (' + esc(cfg().devise) + ')', 'frais', e.frais, 'min="0" step="any"', 'number')}</div>
+    <div class="f"><span>Candidats</span><div class="checks" id="ex-cands"></div></div>
+    ${footer('del-ex', isNew ? '' : e.id)}</form>`);
+  const f = $('#frm-ex'); const chosen = new Set((e.candidats || []).map(c => c.id));
+  const fill = () => { f.querySelectorAll('#ex-cands input').forEach(i => i.checked ? chosen.add(i.value) : chosen.delete(i.value));
+    const list = S.apprenants.filter(a => (a.categorie === f.categorie.value && !['diplome', 'abandon'].includes(a.statut)) || chosen.has(a.id)).sort(by('nom'));
+    $('#ex-cands').innerHTML = list.map(a => `<label><input type="checkbox" value="${a.id}" ${chosen.has(a.id) ? 'checked' : ''}> ${esc(nomC(a))} <span class="note">· ${esc(STATUTS[a.statut] || '')}${reste(a) ? ' · reste ' + money(reste(a)) : ''}</span></label>`).join('') || '<p class="empty">Aucun apprenant en formation dans cette catégorie.</p>'; };
+  f.categorie.addEventListener('change', fill); fill();
+  f.addEventListener('submit', async ev => { ev.preventDefault(); const d = fd(f); const id = f.dataset.id || uid(); const old = S.examens.find(x => x.id === id) || {};
+    const ids = [...f.querySelectorAll('#ex-cands input:checked')].map(i => i.value);
+    const prev = Object.fromEntries((old.candidats || []).map(c => [c.id, c.resultat]));
+    const row = { ...old, ...d, frais: Number(d.frais) || 0, candidats: ids.map(i => ({ id: i, resultat: prev[i] || 'attente' })) };
+    try {
+      await put('examens', id, row);
+      for (const i of ids) { const a = appById(i); if (a && !prev[i] && ['inscrit', 'code', 'conduite'].includes(a.statut)) await put('apprenants', a.id, { ...a, statut: 'examen', statutAvant: a.statut }); }
+      toast('Examen enregistré'); openEx(id, row);
+    } catch (e) {} });
+}
+function openEx(id, fallback) {
+  const e = S.examens.find(x => x.id === id) || (fallback ? { ...fallback, id } : null); if (!e) return;
+  const cs = e.candidats || [];
+  openDlg(`${dhead(esc(EXT[e.type] || e.type) + ' · ' + esc(e.categorie || ''))}
+    <div class="info"><div><span>Date</span><b>${fmtDate(e.date, { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}</b></div><div><span>Heure</span><b>${esc(e.heure || '—')}</b></div><div><span>Lieu</span><b>${esc(e.lieu || '—')}</b></div><div><span>Examinateur</span><b>${esc(e.examinateur || '—')}</b></div>${e.frais ? `<div><span>Frais par candidat</span><b>${money(e.frais)}</b></div>` : ''}</div>
+    <div class="sect"><h3>Candidats et résultats (${cs.length})</h3><div class="list">${cs.map(c => { const a = appById(c.id); return `<div class="li"><div class="who">${avatar(a, true)}<div class="t"><b>${esc(nomC(a))}</b><small>${a ? esc(a.dossier || '') : ''}</small></div></div><select class="res-sel" id="res-${c.id}" data-act-change="res" data-ex="${e.id}" data-app="${c.id}" aria-label="Résultat de ${esc(nomC(a))}" ${S.ro ? 'disabled' : ''}>${Object.entries(RES).map(([k, v]) => `<option value="${k}" ${c.resultat === k ? 'selected' : ''}>${v}</option>`).join('')}</select></div>`; }).join('') || '<p class="empty">Aucun candidat. Modifiez l’examen pour en ajouter.</p>'}</div>
+    <p class="note">« Admis » au code fait passer l’apprenant en formation conduite ; « Admis » à la conduite le marque comme ayant obtenu son permis. « Ajourné » ou « Absent » le remet en formation.</p></div>
+    <footer class="df"><button class="btn ghost" data-act="print-ex" data-id="${e.id}">Imprimer la liste</button><button class="btn w" data-act="edit-ex" data-id="${e.id}">Modifier l’examen / les candidats</button></footer>`);
+}
+
+/* ---- Catégorie ---- */
+function formCat(c) {
+  const isNew = !c; c = c || { ordre: (S.categories.length + 1), heuresCode: 0, heuresConduite: 0, tarif: 0 };
+  openDlg(`<form id="frm-cat" class="form" data-id="${c.id || ''}">${dhead(isNew ? 'Nouvelle catégorie' : 'Catégorie ' + esc(c.code))}
+    <div class="grid2">${inp('Code (ex. B, C1)', 'code', c.code, 'required maxlength="6" pattern="[A-Za-z0-9+]+"' + (isNew ? '' : ' readonly'))}${inp('Libellé', 'libelle', c.libelle, 'required')}
+    ${inp('Âge minimum', 'ageMin', c.ageMin, 'min="0"', 'number')}${inp('Tarif de la formation (' + esc(cfg().devise) + ')', 'tarif', c.tarif, 'min="0" step="any"', 'number')}
+    ${inp('Heures de code prévues', 'heuresCode', c.heuresCode, 'min="0"', 'number')}${inp('Heures de conduite prévues', 'heuresConduite', c.heuresConduite, 'min="0"', 'number')}
+    ${inp('Ordre d’affichage', 'ordre', c.ordre, 'min="0"', 'number')}</div>
+    ${area('Véhicules concernés', 'description', c.description)}
+    ${footer('del-cat', isNew ? '' : c.id)}</form>`);
+  const f = $('#frm-cat');
+  f.addEventListener('submit', async e => { e.preventDefault(); const d = fd(f); const code = d.code.trim().toUpperCase(); const id = f.dataset.id || code.replace(/[^A-Z0-9]/g, '_');
+    if (!f.dataset.id && S.categories.some(x => x.code === code)) { toast('Cette catégorie existe déjà.'); return; }
+    const row = { ...d, code, ageMin: Number(d.ageMin) || 0, tarif: Number(d.tarif) || 0, heuresCode: Number(d.heuresCode) || 0, heuresConduite: Number(d.heuresConduite) || 0, ordre: Number(d.ordre) || 0 };
+    try { await put('categories', id, row); toast('Catégorie enregistrée'); closeDlg(); } catch (e) {} });
+}
+
+/* ---- Moniteur ---- */
+function formMon(m) {
+  const isNew = !m; m = m || { actif: true }; let photo = m.photo || '';
+  openDlg(`<form id="frm-mon" class="form" data-id="${m.id || ''}">${dhead(isNew ? 'Nouveau moniteur' : 'Moniteur')}
+    <div class="row">${avatar(m)}<button type="button" class="btn ghost sm" id="btn-mphoto">Photo</button></div>
+    <div class="grid2">${inp('Nom', 'nom', m.nom, 'required')}${inp('Prénom(s)', 'prenom', m.prenom, 'required')}
+    ${inp('Téléphone', 'telephone', m.telephone, '', 'tel')}${inp('E-mail', 'email', m.email, '', 'email')}
+    ${inp('Catégories enseignées (ex. B, C)', 'categories', m.categories)}${inp('N° d’autorisation d’enseigner', 'autorisation', m.autorisation)}
+    ${inp('Fin de validité de l’autorisation', 'autorisationExp', m.autorisationExp, '', 'date')}${inp('Date d’embauche', 'embauche', m.embauche, '', 'date')}
+    ${sel('Situation', 'actif', m.actif === false ? 'non' : 'oui', [['oui', 'Actif'], ['non', 'Inactif']])}</div>
+    ${area('Notes', 'notes', m.notes)}
+    ${footer('del-mon', isNew ? '' : m.id)}</form>`);
+  const f = $('#frm-mon');
+  $('#btn-mphoto').onclick = async () => { const file = await pickFile('image/*'); if (!file) return; try { photo = await resizeImage(file, 200); f.querySelector('.avatar').innerHTML = `<img src="${photo}" alt="">`; } catch (e) {} };
+  f.addEventListener('submit', async e => { e.preventDefault(); const d = fd(f); const id = f.dataset.id || uid(); const old = S.moniteurs.find(x => x.id === id) || {};
+    const row = { ...old, ...d, nom: d.nom.trim().toUpperCase(), prenom: d.prenom.trim(), actif: d.actif !== 'non', photo }; if (!photo) delete row.photo;
+    try { await put('moniteurs', id, row); toast('Moniteur enregistré'); closeDlg(); } catch (e) {} });
+}
+
+/* ---- Véhicule ---- */
+function formVeh(v) {
+  const isNew = !v; v = v || { statut: 'dispo', categorie: 'B' };
+  openDlg(`<form id="frm-veh" class="form" data-id="${v.id || ''}">${dhead(isNew ? 'Nouveau véhicule' : esc(vehLabel(v)))}
+    <div class="grid2">${inp('Marque et modèle', 'modele', v.modele, 'required')}${inp('Immatriculation', 'immat', v.immat, 'required')}
+    ${sel('Catégorie', 'categorie', v.categorie, catsSorted().map(c => [c.code, c.code]))}${sel('État', 'statut', v.statut, [['dispo', 'Disponible'], ['garage', 'Au garage'], ['panne', 'En panne']])}
+    ${inp('Kilométrage actuel', 'km', v.km, 'min="0"', 'number')}${inp('Prochaine vidange à (km)', 'vidangeKm', v.vidangeKm, 'min="0"', 'number')}
+    ${inp('Assurance valable jusqu’au', 'assuranceExp', v.assuranceExp, '', 'date')}${inp('Visite technique valable jusqu’au', 'visiteExp', v.visiteExp, '', 'date')}
+    ${inp('Date de mise en circulation', 'miseCirculation', v.miseCirculation, '', 'date')}${sel('Boîte de vitesses', 'boite', v.boite, [['', '—'], ['manuelle', 'Manuelle'], ['auto', 'Automatique']])}</div>
+    ${area('Notes (entretien, sinistres…)', 'notes', v.notes)}
+    ${footer('del-veh', isNew ? '' : v.id)}</form>`);
+  const f = $('#frm-veh');
+  f.addEventListener('submit', async e => { e.preventDefault(); const d = fd(f); const id = f.dataset.id || uid(); const old = S.vehicules.find(x => x.id === id) || {};
+    const row = { ...old, ...d, immat: d.immat.trim().toUpperCase(), km: Number(d.km) || 0, vidangeKm: Number(d.vidangeKm) || 0 };
+    try { await put('vehicules', id, row); toast('Véhicule enregistré'); closeDlg(); } catch (e) {} });
+}
+
+/* ---- Dépense ---- */
+function formDep(d) {
+  const isNew = !d; d = d || { date: todayISO(), categorie: 'Carburant', mode: 'Espèces' };
+  openDlg(`<form id="frm-dep" class="form" data-id="${d.id || ''}">${dhead(isNew ? 'Nouvelle dépense' : 'Dépense')}
+    <div class="grid2">${inp('Date', 'date', d.date, 'required', 'date')}${inp('Montant (' + esc(cfg().devise) + ')', 'montant', d.montant, 'required min="0" step="any"', 'number')}
+    ${sel('Catégorie', 'categorie', d.categorie, DEP_CATS.map(x => [x, x]))}${sel('Mode de paiement', 'mode', d.mode, MODES_PAY.map(x => [x, x]))}
+    ${inp('Libellé', 'libelle', d.libelle, 'placeholder="ex. Plein d’essence, salaire d’octobre…"')}${inp('Véhicule concerné', 'vehicule', d.vehicule, 'list="dl-veh2" autocomplete="off"')}
+    ${inp('Fournisseur / bénéficiaire', 'fournisseur', d.fournisseur)}${inp('N° de pièce / facture', 'piece', d.piece)}</div>
+    <datalist id="dl-veh2">${allVehicules().map(m => `<option value="${esc(m)}">`).join('')}</datalist>
+    ${footer('del-dep', isNew ? '' : d.id)}</form>`);
+  const f = $('#frm-dep');
+  f.addEventListener('submit', async e => { e.preventDefault(); const x = fd(f); const id = f.dataset.id || uid(); const old = S.depenses.find(y => y.id === id) || {};
+    try { await put('depenses', id, { ...old, ...x, montant: Number(x.montant) || 0 }); toast('Dépense enregistrée'); closeDlg(); } catch (e) {} });
+}
+
+/* ---- Exports ---- */
+function exportCSV(kind) {
+  const t = todayISO(); let csv = '';
+  if (kind === 'apprenants') csv = toCSV(['Dossier', 'Nom', 'Prénom', 'Sexe', 'Naissance', 'Téléphone', 'E-mail', 'Adresse', 'Pièce', 'Catégorie', 'Statut', 'Inscription', 'Permis obtenu', 'Coût', 'Payé', 'Reste', 'Heures conduite', 'Livret %'],
+    S.apprenants.slice().sort(by('nom')).map(a => [a.dossier, a.nom, a.prenom, a.sexe, a.dateNaissance, a.telephone, a.email, a.adresse, a.piece, a.categorie, STATUTS[a.statut], a.dateInscription, a.datePermis, a.montantTotal, paye(a), reste(a), (minutesConduite(a) / 60).toFixed(1).replace('.', ','), livretPct(a)]));
+  else if (kind === 'paiements') csv = toCSV(['Date', 'N° reçu', 'Dossier', 'Apprenant', 'Mode', 'Motif', 'Montant'], allPayments().sort(by('date')).map(p => [p.date, p.no, p.a.dossier, nomC(p.a), p.mode, p.motif, p.montant]));
+  else if (kind === 'depenses') csv = toCSV(['Date', 'Catégorie', 'Libellé', 'Véhicule', 'Fournisseur', 'Pièce', 'Mode', 'Montant'], S.depenses.slice().sort(by('date')).map(d => [d.date, d.categorie, d.libelle, d.vehicule, d.fournisseur, d.piece, d.mode, d.montant]));
+  else if (kind === 'seances') csv = toCSV(['Date', 'Heure', 'Durée (min)', 'Type', 'Apprenant', 'Groupe', 'Moniteur', 'Véhicule', 'Statut', 'Observations'], S.seances.slice().sort((a, b) => (a.date + a.heure).localeCompare(b.date + b.heure)).map(s => [s.date, s.heure, s.duree, s.type, s.apprenantId ? nomC(appById(s.apprenantId)) : '', s.groupe, s.moniteur, s.vehicule, SEANCE_ST[s.statut], s.notes]));
+  else if (kind === 'examens') csv = toCSV(['Date', 'Heure', 'Épreuve', 'Catégorie', 'Lieu', 'Candidat', 'Dossier', 'Résultat'], S.examens.slice().sort(by('date')).flatMap(e => (e.candidats || []).map(c => { const a = appById(c.id); return [e.date, e.heure, EXT[e.type], e.categorie, e.lieu, nomC(a), a?.dossier, RES[c.resultat]]; })));
+  saveFile(`${kind}_${t}.csv`, csv, 'text/csv;charset=utf-8');
+}
+async function backup() {
+  const d = snapshotState(); d.exportedAt = new Date().toISOString(); d.app = 'Gestion Auto-École';
+  await saveFile(`sauvegarde_autoecole_${todayISO()}.json`, JSON.stringify(d, null, 1), 'application/json');
+  try { await putConfig({ ...S.config, lastBackup: todayISO() }); } catch (e) {}
+}
+async function restore() {
+  const f = await pickFile('.json,application/json'); if (!f) return;
+  let d; try { d = JSON.parse(await readAsText(f)); } catch (e) { toast('Ce fichier n’est pas une sauvegarde valide.'); return; }
+  if (!d || !Array.isArray(d.apprenants)) { toast('Ce fichier n’est pas une sauvegarde de l’application.'); return; }
+  const n = COLS.reduce((t, c) => t + (d[c] || []).length, 0);
+  openDlg(`${dhead('Restaurer la sauvegarde')}<p>Le fichier contient <b>${n}</b> élément(s)${d.exportedAt ? ', exporté le ' + fmtLong(d.exportedAt.slice(0, 10)) : ''}.</p><p class="warn-t">Toutes les données actuelles seront remplacées par celles de la sauvegarde.</p><footer class="df"><button class="btn ghost" data-act="close">Annuler</button><button class="btn danger" id="btn-restore">Remplacer mes données</button></footer>`);
+  $('#btn-restore').onclick = async () => {
+    $('#btn-restore').disabled = true; $('#btn-restore').textContent = 'Restauration…';
+    if (!DB) { applyState({ ...d, config: { ...d.config, pinHash: S.config.pinHash } }); saveLocal(); scheduleRender(); closeDlg(); toast('Sauvegarde restaurée'); return; }
+    try {
+      for (const c of COLS) { for (const x of S[c].slice()) if (!(d[c] || []).some(y => y.id === x.id)) await del(c, x.id); for (const x of d[c] || []) await put(c, x.id, x); }
+      if (d.config) await putConfig(d.config); closeDlg(); toast('Sauvegarde restaurée');
+    } catch (e) { toast('Restauration interrompue. Réessayez.'); }
+  };
+}
+
+/* ============ Événements ============ */
+function armed(btn, label) { if (btn.dataset.armed) return true; btn.dataset.armed = '1'; btn.dataset.orig = btn.textContent; btn.textContent = label || 'Confirmer la suppression'; btn.classList.add('danger'); btn.classList.remove('ghost'); setTimeout(() => { if (btn.isConnected) { delete btn.dataset.armed; btn.textContent = btn.dataset.orig; btn.classList.remove('danger'); btn.classList.add('ghost'); } }, 4000); return false; }
+const removeAct = (col, msg) => async (el, id) => { if (!armed(el)) return; try { await del(col, id); closeDlg(); toast(msg); } catch (e) {} };
+const ACTIONS = {
+  close: () => closeDlg(),
+  go: (el, id) => { closeDlg(); location.hash = id; },
+  install: async () => { if (!deferredInstall) return; deferredInstall.prompt(); try { await deferredInstall.userChoice; } catch (e) {} deferredInstall = null; scheduleRender(); },
+  'new-app': () => formApprenant(),
+  'open-app': (el, id) => { S.appTab = 'resume'; openApp(id); },
+  apptab: (el, id) => { S.appTab = el.dataset.v; openApp(id); },
+  'edit-app': (el, id) => formApprenant(appById(id)),
+  'del-app': removeAct('apprenants', 'Dossier supprimé'),
+  'del-pay': async (el, id) => { if (!armed(el, 'Confirmer')) return; const a = appById(id); if (!a) return; const p = (a.paiements || []).slice(); p.splice(Number(el.dataset.i), 1); const row = { ...a, paiements: p }; try { await put('apprenants', id, row); openApp(id, row); } catch (e) {} },
+  recu: (el, id) => { const a = appById(id); if (a) docRecu(a, Number(el.dataset.i)); },
+  fiche: (el, id) => docFiche(appById(id)), contrat: (el, id) => docContrat(appById(id)), attestation: (el, id) => docAttestation(appById(id)), releve: (el, id) => docReleve(appById(id)),
+  'new-seance': el => formSeance(null, { date: el.dataset.date, app: el.dataset.app }),
+  'edit-seance': (el, id) => { if (!S.ro) formSeance(S.seances.find(s => s.id === id)); },
+  'del-seance': removeAct('seances', 'Séance supprimée'),
+  wk: el => { S.week = el.dataset.n === '0' ? monday(todayISO()) : addDays(S.week, Number(el.dataset.n)); render(); },
+  'print-week': () => docSemaine(),
+  'new-ex': () => formExamen(), 'open-ex': (el, id) => openEx(id), 'edit-ex': (el, id) => formExamen(S.examens.find(x => x.id === id)),
+  'del-ex': removeAct('examens', 'Examen supprimé'),
+  'print-ex': (el, id) => docExamen(S.examens.find(x => x.id === id)),
+  extab: el => { S.exTab = el.dataset.v; render(); },
+  'new-cat': () => formCat(), 'edit-cat': (el, id) => { if (!S.ro) formCat(S.categories.find(c => c.id === id)); }, 'del-cat': removeAct('categories', 'Catégorie supprimée'),
+  'install-cats': async el => { el.disabled = true; try { for (const c of CATS_DEFAUT) await put('categories', c.code, c); toast('Catégories installées'); } catch (e) { el.disabled = false; } },
+  'new-mon': () => formMon(), 'edit-mon': (el, id) => { if (!S.ro) formMon(S.moniteurs.find(m => m.id === id)); }, 'del-mon': removeAct('moniteurs', 'Moniteur supprimé'),
+  'new-veh': () => formVeh(), 'edit-veh': (el, id) => { if (!S.ro) formVeh(S.vehicules.find(v => v.id === id)); }, 'del-veh': removeAct('vehicules', 'Véhicule supprimé'),
+  'new-dep': () => formDep(), 'edit-dep': (el, id) => { if (!S.ro) formDep(S.depenses.find(d => d.id === id)); }, 'del-dep': removeAct('depenses', 'Dépense supprimée'),
+  csv: (el, id) => exportCSV(id), backup: () => backup(), restore: () => restore(),
+  fam: el => { S.fam = el.dataset.v; render(); },
+  'qz-start': () => { const mode = $('#qz-mode').value; Q = { etat: 'question', mode, app: $('#qz-app').value, i: 0, rep: [], sel: null, items: buildQuiz(mode) }; stopTimer(); if (mode === 'examen') { Q.end = Date.now() + 25 * 60 * 1000; qTimer = setInterval(tickTimer, 1000); } render(); tickTimer(); window.scrollTo(0, 0); },
+  'qz-ans': el => { const k = Number(el.dataset.k); if (Q.mode === 'examen') { Q.sel = k; render(); tickTimer(); return; } if (Q.rep[Q.i] != null) return; Q.rep[Q.i] = k; render(); },
+  'qz-valid': () => { if (Q.sel == null) return; Q.rep[Q.i] = Q.sel; Q.sel = null; if (Q.i + 1 < Q.items.length) { Q.i++; render(); tickTimer(); } else finishQuiz(); },
+  'qz-next': () => { if (Q.i + 1 < Q.items.length) { Q.i++; render(); } else finishQuiz(); },
+  'qz-again': () => { stopTimer(); Q = { ...Q, etat: 'config', items: [], i: 0, rep: [], sel: null }; render(); },
+  'qz-quit': () => { stopTimer(); Q = { ...Q, etat: 'config', items: [], i: 0, rep: [], sel: null }; render(); },
+  'purge-ex': async el => { if (!armed(el, 'Confirmer : tout supprimer')) return; el.disabled = true; try { for (const col of COLS) for (const x of S[col].filter(r => r.exemple)) await del(col, x.id); toast('Données d’exemple supprimées'); } catch (e) {} },
+  logo: async () => { const f = await pickFile('image/*'); if (!f) return; try { const logo = await resizeImage(f, 320, 'image/png'); await putConfig({ ...S.config, logo }); toast('Logo enregistré'); } catch (e) { toast('Image illisible.'); } },
+  'logo-del': async () => { const c = { ...S.config }; delete c.logo; try { await putConfig(c); } catch (e) {} },
+  theme: el => { try { localStorage.setItem('ae-theme', el.dataset.v); } catch (e) {} applyTheme(); render(); },
+  'pin-off': async el => { if (!armed(el, 'Confirmer')) return; const c = { ...S.config }; delete c.pinHash; await putConfig(c); toast('Code d’accès désactivé'); },
+  'lock-now': () => showLock()
+};
+document.addEventListener('click', ev => {
+  const el = ev.target.closest('[data-act]'); if (!el || el.closest('#lock')) return;
+  const fn = ACTIONS[el.dataset.act]; if (fn) fn(el, el.dataset.id);
+});
+document.addEventListener('input', ev => { if (ev.target.id === 'q-app') { S.f.q = ev.target.value; render(); } });
+document.addEventListener('change', async ev => {
+  const t = ev.target;
+  if (t.id === 'f-statut') { S.f.statut = t.value; render(); }
+  else if (t.id === 'f-cat') { S.f.cat = t.value; render(); }
+  else if (t.id === 'f-mon') { S.moniteur = t.value; render(); }
+  else if (t.id === 'fin-year') { S.finYear = Number(t.value); render(); }
+  else if (t.id === 'fin-month') { S.finMonth = Number(t.value); render(); }
+  else if (t.id === 'rep-year') { S.repYear = Number(t.value); render(); }
+  else if (t.id === 'qz-mode') Q.mode = t.value;
+  else if (t.id === 'qz-app') Q.app = t.value;
+  else if (t.dataset.actChange === 'livret') {
+    const a = appById(t.dataset.app); if (!a) return; t.className = 'lv' + t.value;
+    try { await put('apprenants', a.id, { ...a, livret: { ...(a.livret || {}), [t.dataset.k]: Number(t.value) } }); } catch (e) {}
+  } else if (t.dataset.actChange === 'doc') {
+    const a = appById(t.dataset.app); if (!a) return;
+    try { await put('apprenants', a.id, { ...a, docs: { ...(a.docs || {}), [t.dataset.i]: t.checked } }); } catch (e) {}
+  } else if (t.dataset.actChange === 'res') {
+    const ex = S.examens.find(x => x.id === t.dataset.ex); if (!ex) return;
+    const r = t.value, aid = t.dataset.app;
+    const row = { ...ex, candidats: (ex.candidats || []).map(c => c.id === aid ? { ...c, resultat: r } : c) };
+    try {
+      await put('examens', ex.id, row);
+      const a = appById(aid); let ns = null;
+      if (a && r === 'admis') { if (ex.type === 'code' && ['inscrit', 'code', 'examen'].includes(a.statut)) ns = 'conduite'; if (ex.type === 'conduite' && a.statut !== 'diplome') ns = 'diplome'; }
+      if (a && (r === 'ajourne' || r === 'absent') && a.statut === 'examen') ns = ex.type === 'code' ? 'code' : 'conduite';
+      if (ns) { await put('apprenants', a.id, { ...a, statut: ns, ...(ns === 'diplome' ? { datePermis: ex.date } : {}) }); toast(`${nomC(a)} : ${STATUTS[ns]}`); }
+      else toast('Résultat enregistré');
+    } catch (e) {}
+  }
+});
+document.addEventListener('submit', async ev => {
+  if (ev.target.id === 'frm-cfg') {
+    ev.preventDefault(); const d = fd(ev.target); const keep = ['nom', 'agrement', 'adresse', 'ville', 'telephone', 'email', 'nif', 'devise', 'directeur'];
+    const c = { ...S.config }; keep.forEach(k => c[k] = (d[k] || '').trim()); c.nom = c.nom || 'Mon auto-école'; c.seuilCode = Math.min(40, Math.max(1, Number(d.seuilCode) || 35));
+    try { await putConfig(c); toast('Paramètres enregistrés'); } catch (e) {}
+  } else if (ev.target.id === 'frm-pin') {
+    ev.preventDefault(); const p = $('#pin-new').value.trim(); if (p.length < 4) { toast('Le code doit comporter au moins 4 caractères.'); return; }
+    await putConfig({ ...S.config, pinHash: await hashPin(p) }); toast('Code d’accès enregistré');
+  }
+});
+document.addEventListener('keydown', ev => { if (ev.key === 'Escape' && dlg.open) closeDlg(); });
+
+init();
+
+</script>
+</body>
+</html>

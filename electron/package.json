@@ -1,0 +1,70 @@
+{
+  "name": "gestion-auto-ecole",
+  "productName": "Gestion Auto-École",
+  "version": "2.0.0",
+  "description": "Gestion complète d'auto-école : inscriptions, paiements, planning, examens, moniteurs, véhicules, finances et code de la route.",
+  "main": "main.js",
+  "author": {
+    "name": "Gestion Auto-École",
+    "email": "contact@exemple.com"
+  },
+  "homepage": "https://exemple.com",
+  "license": "UNLICENSED",
+  "private": true,
+  "scripts": {
+    "start": "electron .",
+    "dist": "electron-builder --publish never",
+    "dist:win": "electron-builder --win --publish never",
+    "dist:mac": "electron-builder --mac --publish never",
+    "dist:linux": "electron-builder --linux --publish never"
+  },
+  "devDependencies": {
+    "electron": "31.7.7",
+    "electron-builder": "24.13.3"
+  },
+  "build": {
+    "appId": "com.autoecole.gestion",
+    "productName": "Gestion Auto-École",
+    "artifactName": "Gestion-Auto-Ecole-${version}-${os}-${arch}.${ext}",
+    "files": [
+      "main.js",
+      "app/**/*"
+    ],
+    "directories": {
+      "output": "dist"
+    },
+    "win": {
+      "target": [
+        "nsis",
+        "portable"
+      ],
+      "icon": "app/icons/icon.ico"
+    },
+    "nsis": {
+      "oneClick": false,
+      "perMachine": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "Gestion Auto-École",
+      "language": "1036"
+    },
+    "mac": {
+      "target": [
+        "dmg"
+      ],
+      "category": "public.app-category.business",
+      "icon": "app/icons/icon-1024.png"
+    },
+    "linux": {
+      "target": [
+        "AppImage",
+        "deb"
+      ],
+      "category": "Office",
+      "icon": "app/icons/icon-512.png",
+      "maintainer": "Gestion Auto-École <contact@exemple.com>"
+    },
+    "publish": null
+  }
+}

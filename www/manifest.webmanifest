@@ -1,0 +1,56 @@
+{
+  "name": "Gestion Auto-École",
+  "short_name": "Auto-École",
+  "lang": "fr",
+  "dir": "ltr",
+  "description": "Inscriptions, paiements, planning, examens, moniteurs, véhicules, finances et code de la route.",
+  "start_url": "./index.html",
+  "scope": "./",
+  "display": "standalone",
+  "display_override": [
+    "window-controls-overlay",
+    "standalone"
+  ],
+  "background_color": "#2b3038",
+  "theme_color": "#2b3038",
+  "orientation": "any",
+  "categories": [
+    "business",
+    "education",
+    "productivity"
+  ],
+  "icons": [
+    {
+      "src": "icons/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "icons/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "icons/maskable-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Inscrire un apprenant",
+      "url": "./index.html#apprenants"
+    },
+    {
+      "name": "Planning",
+      "url": "./index.html#planning"
+    },
+    {
+      "name": "Examens",
+      "url": "./index.html#examens"
+    }
+  ]
+}

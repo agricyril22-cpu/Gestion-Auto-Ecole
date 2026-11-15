@@ -9,12 +9,12 @@ const toDate = s => new Date(s + 'T00:00:00');
 const addDays = (s, n) => { const d = toDate(s); d.setDate(d.getDate() + n); return iso(d); };
 const daysBetween = (a, b) => Math.round((toDate(b) - toDate(a)) / 86400000);
 const monday = s => { const d = toDate(s); const w = (d.getDay() + 6) % 7; d.setDate(d.getDate() - w); return iso(d); };
-const fmtDate = (s, o) => s ? toDate(s).toLocaleDateString('fr-FR', o || { day: '2-digit', month: 'short', year: 'numeric' }) : '—';
+const fmtDate = (s, o) => { if (!s) return '—'; const d = toDate(s); return isNaN(d) ? '—' : d.toLocaleDateString('fr-FR', o || { day: '2-digit', month: 'short', year: 'numeric' }); };
 const fmtLong = s => fmtDate(s, { day: 'numeric', month: 'long', year: 'numeric' });
 const by = k => (a, b) => String(a[k] ?? '').localeCompare(String(b[k] ?? ''));
 const shuffle = a => { a = a.slice(); for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; };
 const sum = (arr, f) => arr.reduce((t, x) => t + (Number(f(x)) || 0), 0);
-function age(dn) { if (!dn) return null; const d = toDate(dn), t = new Date(); let a = t.getFullYear() - d.getFullYear(); if (t.getMonth() < d.getMonth() || (t.getMonth() === d.getMonth() && t.getDate() < d.getDate())) a--; return a; }
+function age(dn) { if (!dn) return null; const d = toDate(dn), t = new Date(); if (isNaN(d)) return null; let a = t.getFullYear() - d.getFullYear(); if (t.getMonth() < d.getMonth() || (t.getMonth() === d.getMonth() && t.getDate() < d.getDate())) a--; return a; }
 const mins = t => { const [h, m] = String(t || '0:0').split(':'); return (+h || 0) * 60 + (+m || 0); };
 
 function enLettres(n) {

@@ -4,6 +4,7 @@
 !include /NONFATAL "${BUILD_RESOURCES_DIR}\install-password.nsh"
 
 !ifdef AE_PWD
+!ifndef BUILD_UNINSTALLER
 !include nsDialogs.nsh
 !include LogicLib.nsh
 Var AePwdField
@@ -30,4 +31,5 @@ FunctionEnd
 !macro customWelcomePage
   Page custom AePwdCreate AePwdLeave
 !macroend
-!endif
+!endif ; BUILD_UNINSTALLER
+!endif ; AE_PWD

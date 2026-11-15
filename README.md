@@ -99,3 +99,38 @@ Pour que plusieurs postes travaillent en même temps sur les **mêmes** données
    - `styles.css` : apparence
 2. Lancez `python3 build.py` (Python 3 et la bibliothèque Pillow sont requis).
 3. Pour que les appareils déjà installés reçoivent la nouvelle version, changez `VERSION` dans `build.py` et `APP_VERSION` dans `src/core.js`, puis remettez `www/` en ligne.
+
+## Protection : mot de passe d'installation et licences
+
+### Mot de passe d'installation
+- **Windows** : l'installateur demande le mot de passe avant d'installer.
+- **macOS et Linux** : le mot de passe est demandé au premier lancement de l'application.
+- Le mot de passe n'est **jamais écrit dans le dépôt**. Il est lu dans le secret GitHub `AE_INSTALL_PASSWORD` au moment de la fabrication :
+  1. Dépôt GitHub › Settings › Secrets and variables › Actions › **New repository secret**.
+  2. Name : `AE_INSTALL_PASSWORD` · Secret : votre mot de passe.
+  3. Relancez « Installateurs » dans l'onglet Actions.
+- Pour changer le mot de passe : modifiez le secret, puis relancez « Installateurs ».
+
+### Période d'essai et licence
+- L'application fonctionne librement pendant **30 jours** (réglable dans `src/licence-config.js`, avec vos coordonnées de vente).
+- Ensuite, un écran « Période d'essai terminée » bloque l'accès. Il affiche l'**identifiant de l'appareil** (ex. `AE-1A01-9E26-4D12`) et permet d'importer un fichier de licence `.lic`. Les données ne sont jamais effacées, et une sauvegarde reste possible.
+- Le client peut aussi activer sa licence avant la fin de l'essai : Paramètres › Licence.
+
+### Créer une licence pour un client
+1. Le client vous envoie l'identifiant de son appareil.
+2. Ouvrez `tools/generateur-licence.html` dans Chrome ou Edge (fonctionne sans internet).
+3. Chargez votre clé privée `cle-privee.json`.
+4. Remplissez le nom du client, l'école et l'identifiant de l'appareil, puis choisissez une licence définitive ou un abonnement avec date de fin.
+5. Le fichier `.lic` est téléchargé : envoyez-le au client (e-mail, WhatsApp, clé USB).
+
+En ligne de commande : `node tools/generer-licence.mjs --client "Nom" --ecole "École" --appareil AE-XXXX-XXXX-XXXX [--expire 2027-12-31]`
+
+### La clé privée : à protéger absolument
+- Le fichier `cle-privee.json` permet de créer des licences. **Ne le mettez jamais sur GitHub et ne le partagez pas.** Le dossier `cles/` est exclu du dépôt.
+- Gardez-en deux copies, par exemple une clé USB et un stockage personnel. Si vous la perdez, vous ne pourrez plus créer de licences pour les versions déjà installées.
+- Pour changer de clé : `node tools/creer-cles.mjs --force`, puis reconstruisez l'application. Les anciennes licences ne seront alors plus acceptées par les nouvelles versions.
+
+### Limites à connaître
+- Les licences sont signées : sans votre clé privée, impossible d'en fabriquer une fausse ou de modifier une vraie.
+- Le mot de passe d'installation et la période d'essai restent des protections dissuasives. Une personne très expérimentée peut les contourner, comme pour la plupart des logiciels installés localement.
+- Si l'appareil est réinitialisé, ou si les données de l'application sont effacées, son identifiant change : il faut alors délivrer une nouvelle licence.

@@ -111,6 +111,8 @@ async function startLocal() {
     S.config = { ...S.config, initDone: true }; saveLocal();
   }
   scheduleRender();
+  await licenceInit();
+  scheduleRender();
   if (S.config.pinHash) showLock();
 }
 async function init() {

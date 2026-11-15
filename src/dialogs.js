@@ -362,7 +362,9 @@ const ACTIONS = {
   'logo-del': async () => { const c = { ...S.config }; delete c.logo; try { await putConfig(c); } catch (e) {} },
   theme: el => { try { localStorage.setItem('ae-theme', el.dataset.v); } catch (e) {} applyTheme(); render(); },
   'pin-off': async el => { if (!armed(el, 'Confirmer')) return; const c = { ...S.config }; delete c.pinHash; await putConfig(c); toast('Code d’accès désactivé'); },
-  'lock-now': () => showLock()
+  'lock-now': () => showLock(),
+  'lic-import': () => importLicence(null),
+  'lic-copy': async () => { try { await navigator.clipboard.writeText(LIC.deviceId); toast('Identifiant copié : ' + LIC.deviceId); } catch (e) { toast('Identifiant : ' + LIC.deviceId); } }
 };
 document.addEventListener('click', ev => {
   const el = ev.target.closest('[data-act]'); if (!el || el.closest('#lock')) return;

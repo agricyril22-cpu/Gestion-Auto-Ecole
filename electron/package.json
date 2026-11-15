@@ -28,6 +28,8 @@
     "artifactName": "Gestion-Auto-Ecole-${version}-${os}-${arch}.${ext}",
     "files": [
       "main.js",
+      "preload.js",
+      "install.json",
       "app/**/*"
     ],
     "directories": {
@@ -35,8 +37,7 @@
     },
     "win": {
       "target": [
-        "nsis",
-        "portable"
+        "nsis"
       ],
       "icon": "app/icons/icon.ico"
     },
@@ -47,7 +48,8 @@
       "createDesktopShortcut": true,
       "createStartMenuShortcut": true,
       "shortcutName": "Gestion Auto-École",
-      "language": "1036"
+      "language": "1036",
+      "include": "build/installer.nsh"
     },
     "mac": {
       "target": [

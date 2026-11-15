@@ -12,7 +12,7 @@ function render() {
   $('#brand-name').textContent = cfg().nom;
   $('#foot').innerHTML = (S.mode === 'db' ? 'Données en ligne, partagées' : S.mode === 'local' ? 'Données enregistrées sur cet appareil' : 'Chargement…') + (deferredInstall ? `<button class="btn sm" data-act="install">Installer l’application</button>` : '') + `<span style="font-size:.72rem">Version ${APP_VERSION}</span>`;
   const V = { tableau: vTableau, apprenants: vApprenants, planning: vPlanning, examens: vExamens, moniteurs: vMoniteurs, vehicules: vVehicules, finances: vFinances, rapports: vRapports, categories: vCategories, code: vCode, panneaux: vPanneaux, quiz: vQuiz, parametres: vParametres };
-  const banner = (S.note ? `<div class="banner">${esc(S.note)}</div>` : '') + (S.ro ? `<div class="banner">Consultation seule : vous pouvez voir les données mais pas les modifier.</div>` : '');
+  const banner = (S.note ? `<div class="banner">${esc(S.note)}</div>` : '') + (S.ro ? `<div class="banner">Consultation seule : vous pouvez voir les données mais pas les modifier.</div>` : '') + licenceBanner();
   main.innerHTML = banner + V[S.view]();
   if (fid) { const el = document.getElementById(fid); if (el) { el.focus(); try { if (ss != null) el.setSelectionRange(ss, ss); } catch (e) {} } }
 }
@@ -275,7 +275,7 @@ function vParametres() {
   const c = cfg(); const ex = COLS.reduce((n, k) => n + S[k].filter(x => x.exemple).length, 0);
   let theme = 'auto'; try { theme = localStorage.getItem('ae-theme') || 'auto'; } catch (e) {}
   const standalone = window.matchMedia && matchMedia('(display-mode: standalone)').matches;
-  return head('Paramètres', 'Identité de l’école, sauvegardes, sécurité et installation') +
+  return head('Paramètres', 'Licence, identité de l’école, sauvegardes, sécurité et installation') + licenceSection() +
   `<form id="frm-cfg" class="card form" style="max-width:820px"><h3>Identité de l’auto-école</h3><p class="note">Ces informations apparaissent sur les reçus, fiches d’inscription et attestations.</p><div class="grid2">
     <label class="f"><span>Nom de l’auto-école</span><input id="c-nom" name="nom" value="${esc(c.nom)}" required></label>
     <label class="f"><span>N° d’agrément</span><input id="c-agr" name="agrement" value="${esc(c.agrement || '')}"></label>

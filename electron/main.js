@@ -1,6 +1,16 @@
 // Version bureau (Windows, macOS, Linux) de Gestion Auto-École
-const { app, BrowserWindow, Menu, shell } = require('electron');
+const { app, BrowserWindow, Menu, shell, ipcMain } = require('electron');
 const path = require('path');
+const fs = require('fs');
+
+// État de licence conservé dans le dossier de l'application (en plus du stockage du navigateur intégré)
+const storeFile = () => path.join(app.getPath('userData'), 'etat-licence.json');
+ipcMain.on('ae-store-get', e => { try { e.returnValue = JSON.parse(fs.readFileSync(storeFile(), 'utf8')); } catch (err) { e.returnValue = {}; } });
+ipcMain.on('ae-store-set', (e, data) => { try { fs.writeFileSync(storeFile(), JSON.stringify(data)); e.returnValue = true; } catch (err) { e.returnValue = false; } });
+// Empreinte du mot de passe d'installation (fichier généré au moment de la fabrication, jamais publié)
+let installCfg = {};
+try { installCfg = JSON.parse(fs.readFileSync(path.join(__dirname, 'install.json'), 'utf8')); } catch (err) {}
+ipcMain.on('ae-install-cfg', e => { e.returnValue = { hash: installCfg.hash || '', platform: process.platform }; });
 
 if (!app.requestSingleInstanceLock()) app.quit();
 
@@ -10,7 +20,7 @@ function createWindow() {
     title: 'Gestion Auto-École', backgroundColor: '#2b3038',
     icon: path.join(__dirname, 'app', 'icons', 'icon-512.png'),
     autoHideMenuBar: true,
-    webPreferences: { contextIsolation: true, nodeIntegration: false, sandbox: true, spellcheck: true }
+    webPreferences: { preload: path.join(__dirname, 'preload.js'), contextIsolation: true, nodeIntegration: false, sandbox: true, spellcheck: true }
   });
   win.loadFile(path.join(__dirname, 'app', 'index.html'));
   // Les liens externes s'ouvrent dans le navigateur

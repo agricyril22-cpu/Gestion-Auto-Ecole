@@ -11,7 +11,7 @@ FONTS = '<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="p
 
 read = lambda n: open(os.path.join(SRC, n), encoding='utf-8').read()
 css, body = read('styles.css'), read('body.html')
-js = '\n'.join(read(n) for n in ['data.js', 'core.js', 'views.js', 'dialogs.js'])
+js = '\n'.join(read(n) for n in ['data.js', 'core.js', 'licence-config.js', 'licence-cle.js', 'licence.js', 'views.js', 'dialogs.js'])
 
 def write(path, text):
     os.makedirs(os.path.dirname(path), exist_ok=True)

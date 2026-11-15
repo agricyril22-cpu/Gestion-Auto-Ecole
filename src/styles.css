@@ -293,3 +293,16 @@ dialog::backdrop { background: rgba(10, 14, 20, .55); }
 .dtabs button[aria-pressed="true"] { color: var(--ink); border-bottom-color: var(--mark); }
 
 @media (max-width: 820px) { .side .foot { display: none !important; } }
+.gate { width: min(560px, 100%); display: grid; gap: 14px; text-align: center; }
+.gate .gt { font-family: var(--f-display); font-size: 1.9rem; }
+.gate p { color: var(--road-muted); }
+.gate form { display: grid; gap: 12px; }
+.gate input { font-size: 1.2rem; text-align: center; padding: 10px; border-radius: 10px; border: 0; background: rgba(255,255,255,.1); color: var(--road-ink); }
+.gmsg { color: var(--mark); min-height: 1em; }
+.gsmall { font-size: .85rem; }
+.gate .btn.link { color: var(--mark); }
+.devid { display: grid; gap: 6px; justify-items: center; background: rgba(255,255,255,.06); border-radius: 10px; padding: 12px; }
+.devid span { font-size: .8rem; color: var(--road-muted); }
+.devid b { font-family: ui-monospace, Menlo, Consolas, monospace; font-size: 1.3rem; letter-spacing: .06em; user-select: all; }
+.devid .btn.ghost { color: var(--road-ink); border-color: rgba(255,255,255,.25); }
+.banner.lic { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; justify-content: space-between; background: var(--accent-soft); color: var(--ink); }

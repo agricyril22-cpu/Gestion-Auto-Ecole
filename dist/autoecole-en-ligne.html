@@ -296,6 +296,19 @@ dialog::backdrop { background: rgba(10, 14, 20, .55); }
 .dtabs button[aria-pressed="true"] { color: var(--ink); border-bottom-color: var(--mark); }
 
 @media (max-width: 820px) { .side .foot { display: none !important; } }
+.gate { width: min(560px, 100%); display: grid; gap: 14px; text-align: center; }
+.gate .gt { font-family: var(--f-display); font-size: 1.9rem; }
+.gate p { color: var(--road-muted); }
+.gate form { display: grid; gap: 12px; }
+.gate input { font-size: 1.2rem; text-align: center; padding: 10px; border-radius: 10px; border: 0; background: rgba(255,255,255,.1); color: var(--road-ink); }
+.gmsg { color: var(--mark); min-height: 1em; }
+.gsmall { font-size: .85rem; }
+.gate .btn.link { color: var(--mark); }
+.devid { display: grid; gap: 6px; justify-items: center; background: rgba(255,255,255,.06); border-radius: 10px; padding: 12px; }
+.devid span { font-size: .8rem; color: var(--road-muted); }
+.devid b { font-family: ui-monospace, Menlo, Consolas, monospace; font-size: 1.3rem; letter-spacing: .06em; user-select: all; }
+.devid .btn.ghost { color: var(--road-ink); border-color: rgba(255,255,255,.25); }
+.banner.lic { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; justify-content: space-between; background: var(--accent-soft); color: var(--ink); }
 </style>
 <div class="app">
   <aside class="side">
@@ -626,6 +639,8 @@ async function startLocal() {
     S.config = { ...S.config, initDone: true }; saveLocal();
   }
   scheduleRender();
+  await licenceInit();
+  scheduleRender();
   if (S.config.pinHash) showLock();
 }
 async function init() {
@@ -757,6 +772,157 @@ function docHead(title, sub) {
   return `<div class="dhd"><div>${c.logo ? `<img src="${esc(c.logo)}" alt="">` : ''}<div class="big">${esc(c.nom)}</div><div class="small">${[c.adresse, c.ville].filter(Boolean).map(esc).join(', ')}${c.telephone ? '<br>Tél. ' + esc(c.telephone) : ''}${c.email ? ' · ' + esc(c.email) : ''}${c.agrement ? '<br>Agrément n° ' + esc(c.agrement) : ''}${c.nif ? ' · NIF/RCCM ' + esc(c.nif) : ''}</div></div><div style="text-align:right"><h1>${title}</h1>${sub ? `<div class="small">${sub}</div>` : ''}</div></div>`;
 }
 
+/* ============ Réglages de la licence (à personnaliser) ============ */
+const LICENCE_CONFIG = {
+  essaiJours: 30,                       // durée de la période d'essai gratuite
+  vendeur: {                            // coordonnées affichées pour acheter une licence
+    nom: 'Service commercial Gestion Auto-École',
+    telephone: '',
+    email: ''
+  }
+};
+
+/* Clé publique de vérification des licences (générée par tools/creer-cles.mjs, identifiant KMWHT90LT) */
+const LICENCE_CLE_PUBLIQUE = {"kty":"EC","crv":"P-256","x":"Ns6fUg78tnh8a9TUctH9kgiy8tM-_X4pnyTyeNDI2UM","y":"vQAQtFBftO6UBfok_oarCmDMTOXz3FWxmtPmuFQCXDM"};
+
+/* ============ Licence, période d'essai et mot de passe d'installation ============ */
+const LIC = { status: 'none', daysLeft: 0, licence: null, deviceId: '', reason: '', eff: todayISO(), raw: {} };
+const LIC_CHAMPS = ['produit', 'id', 'client', 'ecole', 'appareil', 'type', 'emise', 'expire'];
+const licCanon = p => JSON.stringify(Object.fromEntries(LIC_CHAMPS.map(k => [k, String(p[k] ?? '')])));
+const b64d = s => Uint8Array.from(atob(s), c => c.charCodeAt(0));
+const DESK = window.AE_DESKTOP || null;
+
+const LicStore = {
+  async read() {
+    const parts = [];
+    try { parts.push(JSON.parse(localStorage.getItem('ae-lic') || '{}')); } catch (e) {}
+    try { const v = await IDB.get('licence-state'); if (v) parts.push(v); } catch (e) {}
+    if (DESK) { try { parts.unshift(DESK.get() || {}); } catch (e) {} }
+    const out = {};
+    for (const p of parts) {
+      if (!out.deviceId && p.deviceId) out.deviceId = p.deviceId;
+      if (p.firstRun && (!out.firstRun || p.firstRun < out.firstRun)) out.firstRun = p.firstRun;
+      if (p.lastSeen && (!out.lastSeen || p.lastSeen > out.lastSeen)) out.lastSeen = p.lastSeen;
+      if (!out.licence && p.licence) out.licence = p.licence;
+      if (p.installUnlocked) out.installUnlocked = true;
+    }
+    return out;
+  },
+  async write(s) {
+    try { localStorage.setItem('ae-lic', JSON.stringify(s)); } catch (e) {}
+    try { await IDB.set('licence-state', s); } catch (e) {}
+    if (DESK) { try { DESK.set(s); } catch (e) {} }
+  }
+};
+function newDeviceId() {
+  const a = new Uint8Array(6); crypto.getRandomValues(a);
+  const h = [...a].map(x => x.toString(16).padStart(2, '0')).join('').toUpperCase();
+  return `AE-${h.slice(0, 4)}-${h.slice(4, 8)}-${h.slice(8, 12)}`;
+}
+async function sha256hex(t) { const b = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(t)); return [...new Uint8Array(b)].map(x => x.toString(16).padStart(2, '0')).join(''); }
+
+async function verifyLicence(file) {
+  if (!file || typeof file !== 'object' || !file.licence || !file.signature) return { ok: false, why: 'Ce fichier n’est pas un fichier de licence valide.' };
+  const p = file.licence;
+  if (p.produit !== 'gestion-auto-ecole') return { ok: false, why: 'Cette licence concerne un autre logiciel.' };
+  try {
+    const key = await crypto.subtle.importKey('jwk', LICENCE_CLE_PUBLIQUE, { name: 'ECDSA', namedCurve: 'P-256' }, false, ['verify']);
+    const ok = await crypto.subtle.verify({ name: 'ECDSA', hash: 'SHA-256' }, key, b64d(file.signature), new TextEncoder().encode(licCanon(p)));
+    if (!ok) return { ok: false, why: 'Signature invalide : cette licence n’a pas été délivrée par l’éditeur ou elle a été modifiée.' };
+  } catch (e) { return { ok: false, why: 'La licence n’a pas pu être vérifiée sur cet appareil.' }; }
+  if (p.appareil && p.appareil !== '*' && p.appareil !== LIC.deviceId) return { ok: false, why: `Cette licence a été délivrée pour un autre appareil (${p.appareil}). L’identifiant de cet appareil est ${LIC.deviceId}.` };
+  if (p.expire && p.expire < LIC.eff) return { ok: false, why: `Cette licence a expiré le ${fmtLong(p.expire)}.` };
+  return { ok: true };
+}
+
+function computeTrial() {
+  const used = Math.max(0, daysBetween(LIC.raw.firstRun, LIC.eff));
+  LIC.daysLeft = Math.max(0, (Number(LICENCE_CONFIG.essaiJours) || 30) - used);
+  LIC.status = LIC.daysLeft > 0 ? 'trial' : 'expired';
+}
+
+async function licenceInit() {
+  if (IN_ARTIFACT) { LIC.status = 'online'; return; }
+  const s = await LicStore.read(); const t = todayISO();
+  if (!s.deviceId) s.deviceId = newDeviceId();
+  if (!s.firstRun) s.firstRun = t;
+  s.lastSeen = s.lastSeen && s.lastSeen > t ? s.lastSeen : t;   // une horloge reculée ne prolonge pas l'essai
+  LIC.raw = s; LIC.deviceId = s.deviceId; LIC.eff = s.lastSeen;
+  await LicStore.write(s);
+  await installGate();
+  LIC.licence = null; LIC.reason = '';
+  if (s.licence) {
+    const v = await verifyLicence(s.licence);
+    if (v.ok) { LIC.status = 'licensed'; LIC.licence = s.licence.licence; return; }
+    LIC.reason = v.why;
+  }
+  computeTrial();
+  if (LIC.status === 'expired') await licenceGate();
+}
+
+async function importLicence(msgEl) {
+  const f = await pickFile('.lic,.json,application/json'); if (!f) return false;
+  let data; try { data = JSON.parse(await readAsText(f)); } catch (e) { data = null; }
+  const v = await verifyLicence(data);
+  if (!v.ok) { if (msgEl) msgEl.textContent = v.why; else toast(v.why); return false; }
+  LIC.raw.licence = data; await LicStore.write(LIC.raw);
+  LIC.status = 'licensed'; LIC.licence = data.licence; LIC.reason = '';
+  toast('Licence activée : merci !'); scheduleRender(); return true;
+}
+
+function gateShell(id, inner) {
+  const el = document.createElement('div'); el.className = 'lock'; el.id = id; el.style.zIndex = id === 'install-gate' ? 120 : 110;
+  el.innerHTML = `<div class="gate">${inner}</div>`; document.body.appendChild(el); return el;
+}
+
+/* Mot de passe d'installation (version bureau macOS / Linux ; sous Windows il est demandé par l'installateur) */
+function installGate() {
+  return new Promise(resolve => {
+    let cfgI = null; try { cfgI = DESK && DESK.install ? DESK.install() : null; } catch (e) {}
+    if (!cfgI || !cfgI.hash || cfgI.platform === 'win32' || LIC.raw.installUnlocked) return resolve();
+    const el = gateShell('install-gate', `<strong class="gt">Installation protégée</strong><p>Saisissez le mot de passe d’installation fourni avec le logiciel.</p>
+      <form id="ig-form"><input id="ig-pwd" type="password" autocomplete="off" aria-label="Mot de passe d’installation" required><button class="btn">Valider</button></form><small id="ig-msg" class="gmsg"></small>`);
+    setTimeout(() => $('#ig-pwd').focus(), 50);
+    $('#ig-form').addEventListener('submit', async e => { e.preventDefault();
+      if (await sha256hex('autoecole-install:' + $('#ig-pwd').value) === cfgI.hash) { LIC.raw.installUnlocked = true; await LicStore.write(LIC.raw); el.remove(); resolve(); }
+      else { $('#ig-msg').textContent = 'Mot de passe incorrect.'; $('#ig-pwd').value = ''; } });
+  });
+}
+
+/* Écran de fin d'essai */
+function licenceGate() {
+  return new Promise(resolve => {
+    const v = LICENCE_CONFIG.vendeur || {};
+    const el = gateShell('licence-gate', `<strong class="gt">Période d’essai terminée</strong>
+      <p>Les ${LICENCE_CONFIG.essaiJours} jours d’essai gratuit sont écoulés. Pour continuer à utiliser l’application, importez le fichier de licence fourni par votre revendeur.</p>
+      ${LIC.reason ? `<p class="gmsg">${esc(LIC.reason)}</p>` : ''}
+      <div class="devid"><span>Identifiant de cet appareil, à communiquer pour obtenir votre licence</span><b id="lg-id">${esc(LIC.deviceId)}</b><button type="button" class="btn ghost sm" id="lg-copy">Copier</button></div>
+      <button type="button" class="btn" id="lg-import">Importer le fichier de licence (.lic)</button>
+      <small id="lg-msg" class="gmsg"></small>
+      ${v.nom || v.telephone || v.email ? `<p class="gsmall">Pour acheter une licence : ${esc(v.nom || '')}${v.telephone ? ' · ' + esc(v.telephone) : ''}${v.email ? ' · ' + esc(v.email) : ''}</p>` : ''}
+      <p class="gsmall">Vos données sont conservées. <button type="button" class="btn link sm" id="lg-backup">Télécharger une sauvegarde de mes données</button></p>`);
+    $('#lg-copy').onclick = async () => { try { await navigator.clipboard.writeText(LIC.deviceId); toast('Identifiant copié'); } catch (e) { const r = document.createRange(); r.selectNodeContents($('#lg-id')); getSelection().removeAllRanges(); getSelection().addRange(r); } };
+    $('#lg-import').onclick = async () => { if (await importLicence($('#lg-msg'))) { el.remove(); resolve(); } };
+    $('#lg-backup').onclick = () => backup();
+  });
+}
+
+function licenceBanner() {
+  if (LIC.status === 'trial') return `<div class="banner lic"><span>Version d’essai : <b>${LIC.daysLeft} jour${LIC.daysLeft > 1 ? 's' : ''}</b> restant${LIC.daysLeft > 1 ? 's' : ''}.</span><a class="btn sm" href="#parametres">Activer ma licence</a></div>`;
+  if (LIC.status === 'licensed' && LIC.licence.expire) { const d = daysBetween(LIC.eff, LIC.licence.expire); if (d <= 30) return `<div class="banner lic"><span>Votre licence expire le <b>${fmtLong(LIC.licence.expire)}</b>. Pensez à la renouveler.</span><a class="btn sm" href="#parametres">Importer une nouvelle licence</a></div>`; }
+  return '';
+}
+function licenceSection() {
+  if (IN_ARTIFACT) return '';
+  const l = LIC.licence;
+  const statut = LIC.status === 'licensed' ? `<span class="pill ok">Licence active</span>` : LIC.status === 'trial' ? `<span class="pill warn">Essai : ${LIC.daysLeft} jour(s) restant(s)</span>` : `<span class="pill bad">Non activée</span>`;
+  return `<div class="card" style="max-width:820px"><h3>Licence</h3><div class="row" style="margin-bottom:10px">${statut}</div>
+    <div class="info">${l ? `<div><span>Titulaire</span><b>${esc(l.client)}</b></div><div><span>École</span><b>${esc(l.ecole || '—')}</b></div><div><span>N° de licence</span><b>${esc(l.id)}</b></div><div><span>Validité</span><b>${l.expire ? 'Jusqu’au ' + fmtLong(l.expire) : 'Définitive'}</b></div>` : ''}<div><span>Identifiant de cet appareil</span><b id="dev-id">${esc(LIC.deviceId)}</b></div></div>
+    ${LIC.reason && LIC.status !== 'licensed' ? `<p class="warn-t" style="margin-top:8px">${esc(LIC.reason)}</p>` : ''}
+    <div class="row" style="margin-top:12px"><button class="btn" data-act="lic-import">${l ? 'Remplacer la licence' : 'Importer le fichier de licence'}</button><button class="btn ghost" data-act="lic-copy">Copier l’identifiant de l’appareil</button></div>
+    <p class="note" style="margin-top:8px">Pour obtenir une licence, communiquez l’identifiant de cet appareil à votre revendeur${LICENCE_CONFIG.vendeur && LICENCE_CONFIG.vendeur.telephone ? ' (' + esc(LICENCE_CONFIG.vendeur.telephone) + ')' : ''}.</p></div>`;
+}
+
 /* ============ Rendu ============ */
 let rq = 0;
 function scheduleRender() { if (rq) return; rq = requestAnimationFrame(() => { rq = 0; render(); }); }
@@ -771,7 +937,7 @@ function render() {
   $('#brand-name').textContent = cfg().nom;
   $('#foot').innerHTML = (S.mode === 'db' ? 'Données en ligne, partagées' : S.mode === 'local' ? 'Données enregistrées sur cet appareil' : 'Chargement…') + (deferredInstall ? `<button class="btn sm" data-act="install">Installer l’application</button>` : '') + `<span style="font-size:.72rem">Version ${APP_VERSION}</span>`;
   const V = { tableau: vTableau, apprenants: vApprenants, planning: vPlanning, examens: vExamens, moniteurs: vMoniteurs, vehicules: vVehicules, finances: vFinances, rapports: vRapports, categories: vCategories, code: vCode, panneaux: vPanneaux, quiz: vQuiz, parametres: vParametres };
-  const banner = (S.note ? `<div class="banner">${esc(S.note)}</div>` : '') + (S.ro ? `<div class="banner">Consultation seule : vous pouvez voir les données mais pas les modifier.</div>` : '');
+  const banner = (S.note ? `<div class="banner">${esc(S.note)}</div>` : '') + (S.ro ? `<div class="banner">Consultation seule : vous pouvez voir les données mais pas les modifier.</div>` : '') + licenceBanner();
   main.innerHTML = banner + V[S.view]();
   if (fid) { const el = document.getElementById(fid); if (el) { el.focus(); try { if (ss != null) el.setSelectionRange(ss, ss); } catch (e) {} } }
 }
@@ -1034,7 +1200,7 @@ function vParametres() {
   const c = cfg(); const ex = COLS.reduce((n, k) => n + S[k].filter(x => x.exemple).length, 0);
   let theme = 'auto'; try { theme = localStorage.getItem('ae-theme') || 'auto'; } catch (e) {}
   const standalone = window.matchMedia && matchMedia('(display-mode: standalone)').matches;
-  return head('Paramètres', 'Identité de l’école, sauvegardes, sécurité et installation') +
+  return head('Paramètres', 'Licence, identité de l’école, sauvegardes, sécurité et installation') + licenceSection() +
   `<form id="frm-cfg" class="card form" style="max-width:820px"><h3>Identité de l’auto-école</h3><p class="note">Ces informations apparaissent sur les reçus, fiches d’inscription et attestations.</p><div class="grid2">
     <label class="f"><span>Nom de l’auto-école</span><input id="c-nom" name="nom" value="${esc(c.nom)}" required></label>
     <label class="f"><span>N° d’agrément</span><input id="c-agr" name="agrement" value="${esc(c.agrement || '')}"></label>
@@ -1433,7 +1599,9 @@ const ACTIONS = {
   'logo-del': async () => { const c = { ...S.config }; delete c.logo; try { await putConfig(c); } catch (e) {} },
   theme: el => { try { localStorage.setItem('ae-theme', el.dataset.v); } catch (e) {} applyTheme(); render(); },
   'pin-off': async el => { if (!armed(el, 'Confirmer')) return; const c = { ...S.config }; delete c.pinHash; await putConfig(c); toast('Code d’accès désactivé'); },
-  'lock-now': () => showLock()
+  'lock-now': () => showLock(),
+  'lic-import': () => importLicence(null),
+  'lic-copy': async () => { try { await navigator.clipboard.writeText(LIC.deviceId); toast('Identifiant copié : ' + LIC.deviceId); } catch (e) { toast('Identifiant : ' + LIC.deviceId); } }
 };
 document.addEventListener('click', ev => {
   const el = ev.target.closest('[data-act]'); if (!el || el.closest('#lock')) return;

@@ -1,0 +1,97 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Générateur de licences — Gestion Auto-École</title>
+<style>
+:root { --bg: #eef1f4; --surface: #fff; --ink: #18212c; --muted: #5a6778; --line: #d5dce5; --accent: #1d5bbf; --ok: #1d7f46; --bad: #b70f29; --road: #2b3038; --mark: #f2b705; }
+@media (prefers-color-scheme: dark) { :root { --bg: #12161b; --surface: #1a2028; --ink: #e6ebf1; --muted: #98a4b3; --line: #2f3946; --accent: #6a9ff2; --ok: #4cc983; --bad: #ff6b7c; color-scheme: dark; } }
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--bg); color: var(--ink); font: 15px/1.5 "Segoe UI", Roboto, Arial, sans-serif; }
+header { background: var(--road); color: #fff; padding: 18px max(16px, 5vw); border-bottom: 4px dashed var(--mark); }
+header h1 { margin: 0; font-size: 1.5rem; } header p { margin: 4px 0 0; color: #b9c2cd; }
+main { max-width: 780px; margin: 0 auto; padding: 24px 16px 60px; display: grid; gap: 18px; }
+.card { background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 18px; display: grid; gap: 12px; }
+h2 { margin: 0; font-size: 1.15rem; }
+.grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 240px), 1fr)); gap: 12px; }
+label { display: grid; gap: 4px; font-size: .85rem; font-weight: 600; color: var(--muted); }
+input, select { font: inherit; color: inherit; background: var(--bg); border: 1px solid var(--line); border-radius: 8px; padding: 9px 10px; width: 100%; }
+button { font: inherit; font-weight: 600; border: 0; border-radius: 8px; padding: 10px 16px; background: var(--accent); color: #fff; cursor: pointer; justify-self: start; }
+button.ghost { background: transparent; color: var(--ink); border: 1px solid var(--line); }
+button:disabled { opacity: .5; cursor: default; }
+.ok { color: var(--ok); font-weight: 600; } .bad { color: var(--bad); font-weight: 600; }
+.note { color: var(--muted); font-size: .88rem; }
+table { width: 100%; border-collapse: collapse; font-size: .9rem; }
+th, td { text-align: left; padding: 6px 8px; border-bottom: 1px solid var(--line); }
+.tw { overflow-x: auto; }
+code { font-family: Consolas, Menlo, monospace; }
+</style>
+</head>
+<body>
+<header><h1>Générateur de licences</h1><p>Gestion Auto-École · à utiliser uniquement par l’éditeur, sur votre propre ordinateur</p></header>
+<main>
+  <section class="card">
+    <h2>1. Charger la clé privée</h2>
+    <p class="note">Sélectionnez le fichier <code>cle-privee.json</code>. Il reste sur votre ordinateur : rien n’est envoyé sur internet.</p>
+    <input type="file" id="key" accept=".json,application/json" aria-label="Fichier de clé privée">
+    <p id="key-msg" class="note">Aucune clé chargée.</p>
+  </section>
+
+  <form class="card" id="frm">
+    <h2>2. Informations de la licence</h2>
+    <div class="grid">
+      <label>Nom du client<input id="client" required placeholder="ex. M. Koné Ibrahim"></label>
+      <label>Nom de l’auto-école<input id="ecole" placeholder="ex. Auto-École La Réussite"></label>
+      <label>Identifiant de l’appareil<input id="appareil" placeholder="AE-XXXX-XXXX-XXXX" pattern="\s*[Aa][Ee]-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{4}\s*"></label>
+      <label>Portée<select id="portee"><option value="un">Cet appareil uniquement (recommandé)</option><option value="tous">Tous les appareils</option></select></label>
+      <label>Type<select id="type"><option value="definitive">Définitive (sans limite de durée)</option><option value="abonnement">Abonnement (avec date de fin)</option></select></label>
+      <label id="exp-l" hidden>Valable jusqu’au<input id="expire" type="date"></label>
+    </div>
+    <p class="note">L’identifiant de l’appareil s’affiche dans l’application : écran « Période d’essai terminée » ou Paramètres › Licence.</p>
+    <button id="go" disabled>Créer et télécharger le fichier de licence</button>
+    <p id="msg" class="note"></p>
+  </form>
+
+  <section class="card">
+    <h2>Licences créées pendant cette session</h2>
+    <div class="tw"><table><thead><tr><th>N°</th><th>Client</th><th>Appareil</th><th>Validité</th></tr></thead><tbody id="hist"><tr><td colspan="4" class="note">Aucune pour l’instant.</td></tr></tbody></table></div>
+    <button type="button" class="ghost" id="csv" disabled>Télécharger le registre (.csv)</button>
+    <p class="note">Gardez une trace de chaque licence délivrée (client, appareil, date).</p>
+  </section>
+</main>
+<script>
+const CHAMPS = ['produit', 'id', 'client', 'ecole', 'appareil', 'type', 'emise', 'expire'];
+const canon = p => JSON.stringify(Object.fromEntries(CHAMPS.map(k => [k, String(p[k] ?? '')])));
+const $ = s => document.querySelector(s);
+let KEY = null; const HIST = [];
+const today = () => { const d = new Date(), z = n => String(n).padStart(2, '0'); return d.getFullYear() + '-' + z(d.getMonth() + 1) + '-' + z(d.getDate()); };
+function save(name, text, type) { const u = URL.createObjectURL(new Blob([text], { type })); const a = document.createElement('a'); a.href = u; a.download = name; document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(u), 3000); }
+$('#key').onchange = async e => {
+  const f = e.target.files[0]; if (!f) return;
+  try { const j = JSON.parse(await f.text()); KEY = await crypto.subtle.importKey('jwk', j.jwk || j, { name: 'ECDSA', namedCurve: 'P-256' }, false, ['sign']);
+    $('#key-msg').innerHTML = `<span class="ok">Clé chargée${j.kid ? ' (' + j.kid + ')' : ''}.</span>`; $('#go').disabled = false; }
+  catch (err) { KEY = null; $('#go').disabled = true; $('#key-msg').innerHTML = '<span class="bad">Ce fichier n’est pas une clé privée valide.</span>'; }
+};
+$('#type').onchange = () => { $('#exp-l').hidden = $('#type').value !== 'abonnement'; $('#expire').required = $('#type').value === 'abonnement'; };
+$('#portee').onchange = () => { const tous = $('#portee').value === 'tous'; $('#appareil').disabled = tous; $('#appareil').required = !tous; };
+$('#appareil').required = true;
+$('#frm').onsubmit = async e => {
+  e.preventDefault(); if (!KEY) return;
+  const t = today(); const rnd = Math.random().toString(36).slice(2, 6).toUpperCase();
+  const p = { produit: 'gestion-auto-ecole', id: 'LIC-' + t.replace(/-/g, '') + '-' + rnd, client: $('#client').value.trim(), ecole: $('#ecole').value.trim(),
+    appareil: $('#portee').value === 'tous' ? '*' : $('#appareil').value.trim().toUpperCase(), type: $('#type').value, emise: t, expire: $('#type').value === 'abonnement' ? $('#expire').value : '' };
+  if (p.expire && p.expire <= t) { $('#msg').innerHTML = '<span class="bad">La date de fin doit être dans le futur.</span>'; return; }
+  const sig = new Uint8Array(await crypto.subtle.sign({ name: 'ECDSA', hash: 'SHA-256' }, KEY, new TextEncoder().encode(canon(p))));
+  const file = { format: 'licence-gestion-auto-ecole-1', licence: p, signature: btoa(String.fromCharCode(...sig)) };
+  const name = 'licence-' + (p.ecole || p.client).normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[^\w-]+/g, '_') + '.lic';
+  save(name, JSON.stringify(file, null, 2), 'application/json');
+  HIST.push(p);
+  $('#hist').innerHTML = HIST.map(h => `<tr><td>${h.id}</td><td>${h.client}${h.ecole ? '<br><span class="note">' + h.ecole + '</span>' : ''}</td><td><code>${h.appareil === '*' ? 'Tous' : h.appareil}</code></td><td>${h.expire ? 'jusqu’au ' + h.expire : 'définitive'}</td></tr>`).join('');
+  $('#csv').disabled = false;
+  $('#msg').innerHTML = `<span class="ok">Licence ${p.id} créée : fichier « ${name} » téléchargé.</span> Envoyez-le au client (e-mail, WhatsApp, clé USB).`;
+};
+$('#csv').onclick = () => save('registre-licences-' + today() + '.csv', '﻿' + [CHAMPS.join(';'), ...HIST.map(h => CHAMPS.map(k => h[k]).join(';'))].join('\r\n'), 'text/csv');
+</script>
+</body>
+</html>

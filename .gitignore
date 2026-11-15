@@ -5,3 +5,7 @@ electron/dist/
 *.zip
 demo/out/
 demo/*.mp4
+cles/
+*.lic
+electron/install.json
+electron/build/install-password.nsh

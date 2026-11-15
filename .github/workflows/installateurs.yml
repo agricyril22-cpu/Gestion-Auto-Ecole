@@ -16,6 +16,10 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 20
+      - name: Préparer le mot de passe d'installation
+        env:
+          AE_INSTALL_PASSWORD: ${{ secrets.AE_INSTALL_PASSWORD }}
+        run: node tools/prepare-build.mjs
       - name: Installer les dépendances
         working-directory: electron
         run: npm install
